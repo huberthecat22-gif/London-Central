@@ -24,12 +24,17 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   if(!roblox||!discord){status.textContent="Please enter both usernames.";return;}
   if(!/^[a-zA-Z0-9_]{3,20}$/.test(roblox)){status.textContent="Please enter a valid Roblox username.";return;}
   const submit=$("#public-whitelist-form button[type=submit]");
-  submit.disabled=true;submit.textContent="Submitting…";
-  const {error}=await supabaseClient.from("whitelist_applications").insert({
-    discord_user_id:null,discord_contact:discord,roblox_username:roblox,status:"pending"
+  submit.disabled=true;submit.textContent="Checking…";
+  const {data,error}=await supabaseClient.rpc("lcfms_submit_public_whitelist",{
+    p_roblox_username:roblox,
+    p_discord_contact:discord
   });
   submit.disabled=false;submit.textContent="Submit Whitelist";
-  if(error){status.textContent="We couldn't submit your request. Please try again later.";return;}
+  if(error){status.textContent="We couldn't submit your request: "+error.message;return;}
+  if(data==="already_submitted"){
+    status.textContent="An application for this Roblox username is already pending or approved. You cannot submit another one.";
+    return;
+  }
   $("#public-whitelist-form").reset();
   status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
 });
