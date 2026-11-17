@@ -18,17 +18,17 @@ async function ensureMember(member){
  const {data:existing,error:readError}=await db.from("discord_members").select("*").eq("discord_user_id",member.id).maybeSingle();
  if(readError) throw readError;
  if(existing) return existing;
- const {data:number,error:numberError}=await db.rpc("lcfms_assign_member_number",{p_discord_user_id:member.id});
- if(numberError) throw numberError;
  const displayName=member.displayName||member.user.username;
- const {data,error}=await db.from("discord_members").insert({
-  discord_user_id:member.id,discord_username:member.user.username,display_name:displayName,member_number:number
- }).select().single();
+ const {data:allocated,error:allocateError}=await db.rpc("lcfms_allocate_member_number",{
+  p_discord_user_id:member.id,p_username:member.user.username,p_display_name:displayName
+ });
+ if(allocateError) throw allocateError;
+ const {data,error}=await db.from("discord_members").select("*").eq("discord_user_id",member.id).single();
  if(error) throw error;
  return data;
 }
 async function syncNickname(member,record){
- const nickname=record.custom_nickname||`[${String(record.member_number).padStart(4,"0")}] ${record.nickname_prefix?record.nickname_prefix+" ":""}${record.display_name}${record.nickname_suffix?" "+record.nickname_suffix:""}`;
+ const nickname=record.custom_nickname||`[${String(record.member_number).padStart(4,"0")}] ${record.custom_prefix?record.custom_prefix+" ":""}${record.discord_display_name||record.discord_username}${record.custom_suffix?" "+record.custom_suffix:""}`;
  if(member.manageable&&member.nickname!==nickname) await member.setNickname(nickname.slice(0,32),"LCFMS member number");
 }
 client.once(Events.ClientReady,async ready=>{
