@@ -1,17 +1,89 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LCFMS | London Central</title><link rel="stylesheet" href="styles.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10151d">
+  <title>LCFMS | London Central</title><link rel="stylesheet" href="styles.css">
+</head>
 <body>
-<header class="topbar"><a class="brand" href="#"><b>LCFMS</b><small>LONDON CENTRAL</small></a><nav><a href="#dashboard">Dashboard</a><a href="#staff">Staff</a><a href="#training">Training</a><a href="#recruitment">Recruitment</a><a href="#notices">Notices</a></nav><button id="signout" class="small hidden">Sign out</button></header>
-<main>
-<section id="login" class="login-wrap"><div class="login-card"><div class="logo">LCFMS</div><h1>Staff Portal</h1><p>Sign in to the London Central management system.</p><form id="login-form"><label>Email address<input id="email" type="email" required autocomplete="username"></label><label>Password<input id="password" type="password" required autocomplete="current-password"></label><button class="primary" type="submit">Sign in</button><div id="login-message" role="status"></div></form><small>Access is limited to approved London Central members.</small></div></section>
-<section id="portal" class="hidden">
-<div class="welcome"><div><p class="eyebrow">LONDON CENTRAL / MANAGEMENT</p><h1 id="hello">Welcome</h1><p>Force Management System</p></div><span id="rank-pill" class="pill">Staff</span></div>
-<div class="tiles" id="dashboard"><article><span>STAFF RECORDS</span><b id="staff-count">—</b></article><article><span>TRAINING</span><b id="training-count">—</b></article><article><span>OPEN APPLICATIONS</span><b id="application-count">—</b></article></div>
-<div class="section-grid">
-<section class="panel" id="staff"><h2>Staff directory</h2><p>Staff records will appear here after the database is configured.</p><div id="staff-list" class="muted">No records loaded.</div></section>
-<section class="panel" id="training"><h2>Training</h2><p>Upcoming training sessions and attendance.</p><div id="training-list" class="muted">No sessions loaded.</div></section>
-<section class="panel" id="recruitment"><h2>Recruitment</h2><p>Applications and recruitment opportunities.</p><div id="recruitment-list" class="muted">No applications loaded.</div></section>
-<section class="panel" id="notices"><h2>Announcements</h2><p>Official London Central notices.</p><div id="notice-list" class="muted">No announcements loaded.</div></section>
-</div><p class="footnote">LCFMS access is restricted. Your permissions are checked by the database, not by this page's appearance.</p>
-</section></main><footer>© <span id="year"></span> LCFMS · London Central</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script></body></html>
+  <section id="login" class="login-screen">
+    <div class="login-card">
+      <div class="brand-mark">LC<span>FMS</span></div>
+      <div class="eyebrow">LONDON CENTRAL</div>
+      <h1>Staff portal</h1><p>Sign in to the London Central management system.</p>
+      <form id="login-form">
+        <label>Email address<input id="email" type="email" required autocomplete="username"></label>
+        <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
+        <button class="primary full" type="submit">Sign in</button>
+        <div id="login-message" role="status" aria-live="polite"></div>
+      </form>
+      <div class="login-foot">Access is limited to approved London Central members.</div>
+    </div>
+  </section>
+
+  <div id="portal" class="app-shell hidden">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-brand" href="#dashboard">
+        <span class="brand-square">LC</span><span><b>LCFMS</b><small>LONDON CENTRAL</small></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-page="dashboard"><span>▦</span>Dashboard</button>
+        <button class="nav-link" data-page="staff"><span>♙</span>Staff management</button>
+        <button class="nav-link" data-page="training"><span>▣</span>Training</button>
+        <button class="nav-link" data-page="recruitment"><span>✉</span>Recruitment</button>
+        <div class="side-label nav-section-label">OPERATIONS</div>
+        <button class="nav-link" data-page="mdt"><span>▤</span>Unit MDT</button>
+        <button class="nav-link" data-page="cad"><span>⌖</span>CAD / Dispatch</button>
+        <button class="nav-link" data-page="pnc"><span>⌕</span>PNC records</button>
+        <div class="side-label nav-section-label">INFORMATION</div>
+        <button class="nav-link" data-page="announcements"><span>◉</span>Announcements</button>
+        <button class="nav-link" data-page="calendar"><span>▦</span>Calendar & events</button>
+        <button class="nav-link" data-page="documents"><span>▧</span>Reference documents</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="secure-note"><span class="status-dot"></span> Secure staff access</div>
+        <button id="signout" class="signout">↪ Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button id="mobile-menu" class="mobile-menu" aria-label="Toggle navigation">☰</button>
+        <div class="breadcrumb">London Central <span>/</span> <b id="crumb">Dashboard</b></div>
+        <div class="top-user"><span class="user-avatar">LC</span><span><b id="user-name">Staff member</b><small id="rank-pill">Approved staff</small></span></div>
+      </header>
+      <div class="page-wrap">
+        <section class="page active" id="page-dashboard">
+          <div class="page-heading"><div><div class="eyebrow">LONDON CENTRAL / OVERVIEW</div><h1 id="hello">Welcome</h1><p>Your force management overview.</p></div><span class="date-chip" id="today"></span></div>
+          <div class="stat-grid">
+            <article class="stat-card"><span>STAFF RECORDS</span><strong id="staff-count">—</strong><small>Registered staff</small></article>
+            <article class="stat-card"><span>TRAINING SESSIONS</span><strong id="training-count">—</strong><small>Scheduled sessions</small></article>
+            <article class="stat-card"><span>OPEN APPLICATIONS</span><strong id="application-count">—</strong><small>Awaiting review</small></article>
+          </div>
+          <div class="content-grid">
+            <article class="panel"><div class="panel-head"><div><h2>Latest announcements</h2><p>Official force notices</p></div><span class="panel-icon">◉</span></div><div id="dashboard-notices" class="empty-state">No announcements have been loaded yet.</div></article>
+            <article class="panel"><div class="panel-head"><div><h2>Quick access</h2><p>Frequently used areas</p></div></div><div class="quick-grid">
+              <button data-page="staff">♙<b>Staff directory</b><small>Personnel records</small></button>
+              <button data-page="training">▣<b>Training</b><small>Courses & sessions</small></button>
+              <button data-page="recruitment">✉<b>Recruitment</b><small>Applications</small></button>
+              <button data-page="cad">⌖<b>CAD / Dispatch</b><small>Operational logs</small></button>
+            </div></article>
+          </div>
+        </section>
+        <section class="page" id="page-staff"><div class="page-heading"><div><div class="eyebrow">PEOPLE / PERSONNEL</div><h1>Staff management</h1><p>View approved personnel and staff records.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Staff directory</h2><p>Records available to your account</p></div></div><div id="staff-list" class="empty-state">No staff records loaded. The profile directory is shown only where database permissions allow it.</div></article></section>
+        <section class="page" id="page-training"><div class="page-heading"><div><div class="eyebrow">LEARNING / DEVELOPMENT</div><h1>Training</h1><p>Training sessions and attendance overview.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Training sessions</h2><p>Scheduled force training</p></div></div><div id="training-list" class="empty-state">No training sessions are currently available.</div></article></section>
+        <section class="page" id="page-recruitment"><div class="page-heading"><div><div class="eyebrow">PEOPLE / RECRUITMENT</div><h1>Recruitment</h1><p>Review recruitment activity and applications.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Applications</h2><p>Application records</p></div></div><div id="recruitment-list" class="empty-state">No applications are currently available.</div></article></section>
+        <section class="page" id="page-mdt"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / FIELD TOOLS</div><h1>Unit MDT</h1><p>Mobile data terminal workspace.</p></div></div><article class="panel"><h2>MDT workspace</h2><div class="empty-state">The MDT interface is a planned module and is not connected yet.</div></article></section>
+        <section class="page" id="page-cad"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / DISPATCH</div><h1>CAD / Dispatch</h1><p>Computer-aided dispatch workspace.</p></div></div><article class="panel"><h2>Dispatch workspace</h2><div class="empty-state">CAD and dispatch functionality is a planned module and is not connected yet.</div></article></section>
+        <section class="page" id="page-pnc"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / RECORDS</div><h1>PNC records</h1><p>Search and review authorised player records.</p></div></div><article class="panel"><h2>PNC workspace</h2><div class="empty-state">PNC records are a planned module and are not connected yet.</div></article></section>
+        <section class="page" id="page-announcements"><div class="page-heading"><div><div class="eyebrow">INFORMATION / COMMUNICATIONS</div><h1>Announcements</h1><p>Official London Central notices.</p></div></div><article class="panel"><h2>Force announcements</h2><div id="notice-list" class="empty-state">No announcements have been loaded yet.</div></article></section>
+        <section class="page" id="page-calendar"><div class="page-heading"><div><div class="eyebrow">INFORMATION / SCHEDULING</div><h1>Calendar & events</h1><p>Upcoming training, patrols and community events.</p></div></div><article class="panel"><div class="empty-state">The calendar and events module is planned but not connected yet.</div></article></section>
+        <section class="page" id="page-documents"><div class="page-heading"><div><div class="eyebrow">INFORMATION / KNOWLEDGE</div><h1>Reference documents</h1><p>Force guidance, policies and reference material.</p></div></div><article class="panel"><div class="empty-state">No reference documents have been added yet.</div></article></section>
+        <footer class="main-footer">LCFMS · London Central <span>Restricted staff portal</span></footer>
+      </div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script><script src="app.js"></script>
+</body></html>
