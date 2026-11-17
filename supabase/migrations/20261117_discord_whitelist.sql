@@ -4,7 +4,7 @@
 
 create table if not exists public.member_number_registry (
   member_number integer primary key check (member_number between 1111 and 9999),
-  discord_user_id text unique not null,
+  discord_user_id text not null,
   reserved_at timestamptz not null default now()
 );
 
@@ -157,6 +157,7 @@ begin
   if not found then raise exception 'Discord member not found'; end if;
   if v_old = p_new_number then return; end if;
 
+  -- Reserve the new number permanently; the old number remains in the registry.
   insert into public.member_number_registry(member_number, discord_user_id)
   values (p_new_number, p_discord_user_id);
 
