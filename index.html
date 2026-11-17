@@ -6,7 +6,35 @@
   <title>LCFMS | London Central</title><link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <section id="login" class="login-screen">
+  <section id="public-home" class="public-screen">
+    <div class="public-card">
+      <div class="brand-mark">LC<span>FMS</span></div>
+      <div class="eyebrow">LONDON CENTRAL</div>
+      <h1>Welcome to London Central</h1>
+      <p>Apply for access to the community, or sign in if you are an authorised staff member.</p>
+      <button id="open-whitelist" class="primary full" type="button">Whitelist</button>
+      <button id="open-staff-login" class="secondary full" type="button">Staff sign in</button>
+      <div class="login-foot">Player whitelist applications do not require an account.</div>
+    </div>
+  </section>
+
+  <section id="public-whitelist" class="public-screen hidden">
+    <div class="public-card">
+      <div class="brand-mark">LC<span>FMS</span></div>
+      <div class="eyebrow">LONDON CENTRAL / PLAYER ACCESS</div>
+      <h1>Whitelist</h1>
+      <p>Enter your Roblox and Discord details. No email, password or application answers are required.</p>
+      <form id="public-whitelist-form">
+        <label>Roblox username<input id="public-roblox" type="text" maxlength="20" required autocomplete="off" placeholder="Your Roblox username"></label>
+        <label>Discord username or ID<input id="public-discord" type="text" maxlength="80" required autocomplete="off" placeholder="Your Discord username or user ID"></label>
+        <button class="primary full" type="submit">Submit Whitelist</button>
+        <div id="public-whitelist-message" role="status" aria-live="polite"></div>
+      </form>
+      <button id="back-public-home" class="text-button" type="button">← Back</button>
+    </div>
+  </section>
+
+  <section id="login" class="login-screen hidden">
     <div class="login-card">
       <div class="brand-mark">LC<span>FMS</span></div>
       <div class="eyebrow">LONDON CENTRAL</div>
