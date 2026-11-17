@@ -1,0 +1,47 @@
+LCFMS BUILD 2 - AUTHENTICATION FOUNDATION
+
+DECISIONS
+- Access: Roblox group members AND manually approved users.
+- Control: owner AND selected senior management.
+- This package is the first secure-login foundation, not the finished FMS.
+
+1) CREATE SUPABASE PROJECT
+Go to https://supabase.com/ and create a Free project for London Central.
+Choose a strong database password and keep it private.
+Open Project Settings > API and copy:
+- Project URL
+- Publishable key (or legacy anon/public key)
+Never copy the service_role/secret key into website files.
+
+2) CREATE DATABASE TABLES
+In Supabase, open SQL Editor > New query.
+Paste the full contents of supabase-schema.sql and run it.
+
+3) CONNECT THE WEBSITE
+Open config.js.
+Replace PASTE_YOUR_SUPABASE_PROJECT_URL and PASTE_YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY.
+Save the file.
+
+4) CREATE STAFF ACCOUNTS
+For the initial owner account, create the user through Supabase Authentication > Users.
+Then create its profile row in Table Editor > profiles using the same auth user UUID:
+- id = Auth user UUID
+- display_name = your display name
+- rank_name = Owner
+- role = owner
+- access_status = approved
+For selected senior managers, create/invite Auth users and set role=senior_management and access_status=approved.
+For manual approvals, set access_status=approved only after checking the person.
+Do not enable public sign-ups.
+
+5) PUBLISH
+Upload index.html, styles.css, config.js, app.js and supabase-schema.sql to your GitHub repository.
+Import the repository into Vercel and deploy as a static site (Other preset; no build command).
+The SQL file is for Supabase, not a website page.
+
+IMPORTANT SECURITY / REMAINING WORK
+- Roblox group membership verification must be performed by a trusted server-side function using Roblox's supported APIs; never put Roblox secrets or Supabase service-role keys in browser code.
+- This starter login checks an approved profile. It does not yet implement automatic Roblox group syncing, rank-based write permissions, invitations, password reset, or staff-management write actions.
+- RLS is enabled. Do not add broad public write policies.
+- Before real-world use, implement server-side authorization for owner/senior-management actions and test with separate accounts.
+- Keep all keys/passwords private. The publishable/anon key is safe for browser use only with correctly configured RLS.

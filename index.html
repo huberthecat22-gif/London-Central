@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LCFMS | London Central</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="topbar"><a class="brand" href="#"><b>LCFMS</b><small>LONDON CENTRAL</small></a><nav><a href="#dashboard">Dashboard</a><a href="#staff">Staff</a><a href="#training">Training</a><a href="#recruitment">Recruitment</a><a href="#notices">Notices</a></nav><button id="signout" class="small hidden">Sign out</button></header>
+<main>
+<section id="login" class="login-wrap"><div class="login-card"><div class="logo">LCFMS</div><h1>Staff Portal</h1><p>Sign in to the London Central management system.</p><form id="login-form"><label>Email address<input id="email" type="email" required autocomplete="username"></label><label>Password<input id="password" type="password" required autocomplete="current-password"></label><button class="primary" type="submit">Sign in</button><div id="login-message" role="status"></div></form><small>Access is limited to approved London Central members.</small></div></section>
+<section id="portal" class="hidden">
+<div class="welcome"><div><p class="eyebrow">LONDON CENTRAL / MANAGEMENT</p><h1 id="hello">Welcome</h1><p>Force Management System</p></div><span id="rank-pill" class="pill">Staff</span></div>
+<div class="tiles" id="dashboard"><article><span>STAFF RECORDS</span><b id="staff-count">—</b></article><article><span>TRAINING</span><b id="training-count">—</b></article><article><span>OPEN APPLICATIONS</span><b id="application-count">—</b></article></div>
+<div class="section-grid">
+<section class="panel" id="staff"><h2>Staff directory</h2><p>Staff records will appear here after the database is configured.</p><div id="staff-list" class="muted">No records loaded.</div></section>
+<section class="panel" id="training"><h2>Training</h2><p>Upcoming training sessions and attendance.</p><div id="training-list" class="muted">No sessions loaded.</div></section>
+<section class="panel" id="recruitment"><h2>Recruitment</h2><p>Applications and recruitment opportunities.</p><div id="recruitment-list" class="muted">No applications loaded.</div></section>
+<section class="panel" id="notices"><h2>Announcements</h2><p>Official London Central notices.</p><div id="notice-list" class="muted">No announcements loaded.</div></section>
+</div><p class="footnote">LCFMS access is restricted. Your permissions are checked by the database, not by this page's appearance.</p>
+</section></main><footer>© <span id="year"></span> LCFMS · London Central</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script></body></html>
