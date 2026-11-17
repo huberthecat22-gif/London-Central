@@ -12,6 +12,7 @@ function showPublicView(view) {
 }
 $("#open-whitelist").addEventListener("click",()=>showPublicView("public-whitelist"));
 $("#open-staff-login").addEventListener("click",()=>{showPublicView("login");message("");});
+$("#back-login-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#public-whitelist-form").addEventListener("submit",async event=>{
   event.preventDefault();
@@ -33,6 +34,8 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
 });
 function showPortal(profile) {
+  $("#public-home").classList.add("hidden");
+  $("#public-whitelist").classList.add("hidden");
   $("#login").classList.add("hidden");
   $("#portal").classList.remove("hidden");
   $("#hello").textContent = `Welcome, ${profile.display_name || "LCFMS staff"}`;
@@ -73,7 +76,7 @@ document.querySelectorAll("[data-page]").forEach(button => button.addEventListen
 $("#mobile-menu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
 $("#signout").addEventListener("click", async () => {
   if (supabaseClient) await supabaseClient.auth.signOut();
-  $("#portal").classList.add("hidden"); $("#login").classList.remove("hidden"); $("#password").value = "";
+  $("#portal").classList.add("hidden"); $("#password").value = ""; showPublicView("public-home");
 });
 (async () => {
   if (!configured || !window.supabase) { message("Setup required: check the Supabase project URL and publishable key in config.js."); return; }
