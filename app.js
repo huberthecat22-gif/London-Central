@@ -85,7 +85,7 @@ function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&l
 async function loadWhitelistApplications(){
  const host=$("#whitelist-list"); if(!host||!supabaseClient||!currentUser)return;
  host.textContent="Loading whitelist applications…";
- const {data,error}=await supabaseClient.from("whitelist_applications").select("id,discord_user_id,roblox_username,status,submitted_at,review_note,answers").order("submitted_at",{ascending:false}).limit(100);
+ const {data,error}=await supabaseClient.from("whitelist_applications").select("id,discord_user_id,discord_contact,roblox_username,status,submitted_at,review_note,answers").order("submitted_at",{ascending:false}).limit(100);
  if(error){host.textContent="Could not load applications: "+error.message;return;}
  const rows=data||[], n=s=>rows.filter(r=>r.status===s).length;
  $("#whitelist-pending-count").textContent=n("pending");$("#whitelist-approved-count").textContent=n("approved");$("#whitelist-rejected-count").textContent=n("rejected");
@@ -94,7 +94,7 @@ async function loadWhitelistApplications(){
  const date=r.submitted_at?new Date(r.submitted_at).toLocaleString("en-GB"):"Date unavailable";
  const answers=r.answers&&typeof r.answers==="object"?Object.entries(r.answers).map(([k,v])=>"<div><b>"+esc(k)+":</b> "+esc(v)+"</div>").join(""):"";
  const actions=r.status==="pending"?'<div class="whitelist-actions"><button class="primary" data-review="approved" data-id="'+esc(r.id)+'">Approve</button><button class="review-reject" data-review="rejected" data-id="'+esc(r.id)+'">Reject</button></div>':"";
- return '<article class="whitelist-card"><div class="whitelist-top"><div><h3>'+esc(r.roblox_username)+'</h3><small>Discord ID: '+esc(r.discord_user_id)+' · '+esc(date)+'</small></div><span class="whitelist-status status-'+esc(r.status)+'">'+esc(r.status)+'</span></div>'+(answers?'<div class="whitelist-answers">'+answers+'</div>':"")+(r.review_note?'<p class="review-note">Review note: '+esc(r.review_note)+'</p>':"")+actions+'</article>';
+ return '<article class="whitelist-card"><div class="whitelist-top"><div><h3>'+esc(r.roblox_username)+'</h3><small>Discord: '+esc(r.discord_contact||r.discord_user_id||"Not supplied")+' · '+esc(date)+'</small></div><span class="whitelist-status status-'+esc(r.status)+'">'+esc(r.status)+'</span></div>'+(answers?'<div class="whitelist-answers">'+answers+'</div>':"")+(r.review_note?'<p class="review-note">Review note: '+esc(r.review_note)+'</p>':"")+actions+'</article>';
  }).join("");
  host.querySelectorAll("[data-review]").forEach(btn=>btn.addEventListener("click",async()=>{
  const decision=btn.dataset.review, note=window.prompt(decision==="approved"?"Optional approval note:":"Reason for rejection:");if(note===null)return;btn.disabled=true;
