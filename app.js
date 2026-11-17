@@ -7,6 +7,31 @@ let currentUser = null;
 if (configured && window.supabase) supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 function message(text) { $("#login-message").textContent = text || ""; }
+function showPublicView(view) {
+  ["public-home","public-whitelist","login"].forEach(id => $("#"+id).classList.toggle("hidden", id !== view));
+}
+$("#open-whitelist").addEventListener("click",()=>showPublicView("public-whitelist"));
+$("#open-staff-login").addEventListener("click",()=>{showPublicView("login");message("");});
+$("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
+$("#public-whitelist-form").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const status=$("#public-whitelist-message");
+  status.textContent="";
+  if(!supabaseClient){status.textContent="Whitelist submissions are temporarily unavailable. Please try again later.";return;}
+  const roblox=$("#public-roblox").value.trim();
+  const discord=$("#public-discord").value.trim();
+  if(!roblox||!discord){status.textContent="Please enter both usernames.";return;}
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(roblox)){status.textContent="Please enter a valid Roblox username.";return;}
+  const submit=$("#public-whitelist-form button[type=submit]");
+  submit.disabled=true;submit.textContent="Submitting…";
+  const {error}=await supabaseClient.from("whitelist_applications").insert({
+    discord_user_id:null,discord_contact:discord,roblox_username:roblox,status:"pending"
+  });
+  submit.disabled=false;submit.textContent="Submit Whitelist";
+  if(error){status.textContent="We couldn't submit your request. Please try again later.";return;}
+  $("#public-whitelist-form").reset();
+  status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
+});
 function showPortal(profile) {
   $("#login").classList.add("hidden");
   $("#portal").classList.remove("hidden");
