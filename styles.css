@@ -8,3 +8,19 @@
 @media(max-width:560px){.stat-grid{grid-template-columns:1fr}.page-heading{align-items:flex-start;gap:12px;flex-direction:column}.top-user span:last-child{display:none}.login-card{padding:28px 22px}.quick-grid{grid-template-columns:1fr}}
 
 .whitelist-card{padding:17px 4px;border-bottom:1px solid var(--line)}.whitelist-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.whitelist-card h3{font-size:14px;margin:0 0 6px}.whitelist-card small,.review-note{color:var(--muted);font-size:10px}.whitelist-status{padding:5px 9px;border-radius:20px;background:#263545;color:#c4d1de;font-size:9px;text-transform:uppercase;letter-spacing:.7px}.status-pending{background:#4a3b20;color:#f2ce83}.status-approved{background:#173e32;color:#8ce0b8}.status-rejected{background:#482b30;color:#f2a2aa}.whitelist-answers{margin-top:13px;color:#b8c5d2;font-size:11px;line-height:1.8}.whitelist-actions{display:flex;gap:8px;margin-top:14px}.whitelist-actions button{padding:8px 13px;font-size:11px}.review-reject{border:1px solid #79434a;background:#38252b;color:#f0b2b8;border-radius:7px}.review-note{margin-top:12px}
+
+/* Public player access and whitelist */
+.public-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,#1b3045 0%,#0d1219 58%)}
+.public-card{width:min(440px,100%);padding:38px;background:#121b26;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.public-card .brand-mark,.public-card>.eyebrow{text-align:center}
+.public-card h1{text-align:center;font-size:25px;margin:27px 0 8px}
+.public-card>p{text-align:center;color:var(--muted);font-size:12px;line-height:1.7;margin:0 0 24px}
+.public-card label{display:block;color:#c5d0dc;font-size:12px;margin:16px 0}
+.public-card input{display:block;width:100%;margin-top:8px;padding:12px 13px;border:1px solid #334354;border-radius:7px;background:#0c131c;color:white;outline:none}
+.public-card input:focus{border-color:#4b91ca}
+.secondary{background:#192431;color:#dce5ee;border:1px solid #334354;border-radius:7px;padding:12px;font-weight:700}
+.public-card .full{margin-top:10px}
+.text-button{display:block;margin:18px auto 0;border:0;background:transparent;color:#8fbce0;font-size:12px}
+#public-whitelist-message{min-height:28px;margin-top:12px;color:#9bd9b8;font-size:12px;line-height:1.5;text-align:center}
+#public-whitelist-form button:disabled{opacity:.65;cursor:wait}
+@media(max-width:560px){.public-card{padding:28px 22px}}
