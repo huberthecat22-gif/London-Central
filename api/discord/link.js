@@ -63,7 +63,7 @@ module.exports = async function handler(req, res) {
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     if (body.action === "state") {
-      return send(res, 200, { state: signState(userId) });
+      return send(res, 200, { state: signState(userId), client_id: process.env.DISCORD_CLIENT_ID, redirect_uri: process.env.DISCORD_REDIRECT_URI });
     }
     if (body.action !== "link" || !body.code || !verifyState(body.state, userId)) {
       return send(res, 400, { error: "Discord connection could not be verified. Please try again." });
