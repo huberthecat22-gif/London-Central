@@ -43,12 +43,12 @@
       <h1>LCFMS sign in</h1><p>Players sign in with the Discord account used on their approved whitelist application. Staff can use their staff login.</p>
       <button id="discord-login" class="primary full" type="button">Continue with Discord</button>
       <div class="login-foot">Approved whitelisted players get member access only. Staff permissions remain separate.</div>
+      <div id="login-message" role="status" aria-live="polite"></div>
       <details class="staff-email-login"><summary>Staff email sign in</summary>
       <form id="login-form">
         <label>Email address<input id="email" type="email" required autocomplete="username"></label>
         <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
         <button class="primary full" type="submit">Sign in</button>
-        <div id="login-message" role="status" aria-live="polite"></div>
       </form></details>
       <button id="back-login-home" class="text-button" type="button">← Back to home</button><div class="login-foot">Access is limited to approved London Central members.</div>
     </div>
@@ -66,7 +66,7 @@
         <button class="nav-link owner-only hidden" data-page="member-numbers"><span>№</span>Member numbers</button>
         <button class="nav-link reviewer-only hidden" data-page="whitelist"><span>✓</span>Whitelist management</button>
         <button class="nav-link" data-page="training"><span>▣</span>Training</button>
-        <button class="nav-link" data-page="recruitment"><span>✉</span>Recruitment</button>
+        <button class="nav-link player-hidden" data-page="recruitment"><span>✉</span>Recruitment</button>
         <div class="side-label nav-section-label">OPERATIONS</div>
         <button class="nav-link" data-page="mdt"><span>▤</span>Unit MDT</button>
         <button class="nav-link" data-page="cad"><span>⌖</span>CAD / Dispatch</button>
@@ -101,7 +101,7 @@
             <article class="panel"><div class="panel-head"><div><h2>Quick access</h2><p>Frequently used areas</p></div></div><div class="quick-grid">
               <button class="player-hidden" data-page="staff">♙<b>Staff directory</b><small>Personnel records</small></button>
               <button data-page="training">▣<b>Training</b><small>Courses & sessions</small></button>
-              <button data-page="recruitment">✉<b>Recruitment</b><small>Applications</small></button>
+              <button class="player-hidden" data-page="recruitment">✉<b>Recruitment</b><small>Applications</small></button>
               <button data-page="cad">⌖<b>CAD / Dispatch</b><small>Operational logs</small></button>
             </div></article>
           </div>
@@ -110,7 +110,7 @@
         <section class="page player-hidden" id="page-staff"><div class="page-heading"><div><div class="eyebrow">PEOPLE / PERSONNEL</div><h1>Staff management</h1><p>View approved personnel and staff records.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Staff directory</h2><p>Records available to your account</p></div></div><div id="staff-list" class="empty-state">No staff records loaded. The profile directory is shown only where database permissions allow it.</div></article></section>
         <section class="page hidden" id="page-whitelist"><div class="page-heading"><div><div class="eyebrow">PEOPLE / ACCESS CONTROL</div><h1>Whitelist management</h1><p>Review Discord-submitted applications for Roblox and community access.</p></div></div><div class="stat-grid"><article class="stat-card"><span>PENDING REVIEW</span><strong id="whitelist-pending-count">—</strong><small>Awaiting a manager decision</small></article><article class="stat-card"><span>APPROVED</span><strong id="whitelist-approved-count">—</strong><small>Applications approved</small></article><article class="stat-card"><span>REJECTED</span><strong id="whitelist-rejected-count">—</strong><small>Applications rejected</small></article></div><article class="panel"><div class="panel-head"><div><h2>Whitelist applications</h2><p>Only the Owner and authorised managers can review applications.</p></div><button class="secondary" id="link-discord-reviewer" type="button">Connect Discord</button><button class="primary" id="refresh-whitelist" type="button">Refresh</button></div><div id="whitelist-list" class="empty-state">Loading whitelist applications…</div></article><p class="empty-state">Connect your Discord account to verify reviewer permissions. Only members with the authorised Discord role can approve or reject applications.</p></section>
         <section class="page" id="page-training"><div class="page-heading"><div><div class="eyebrow">LEARNING / DEVELOPMENT</div><h1>Training</h1><p>Training sessions and attendance overview.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Training sessions</h2><p>Scheduled force training</p></div></div><div id="training-list" class="empty-state">No training sessions are currently available.</div></article></section>
-        <section class="page" id="page-recruitment"><div class="page-heading"><div><div class="eyebrow">PEOPLE / RECRUITMENT</div><h1>Recruitment</h1><p>Review recruitment activity and applications.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Applications</h2><p>Application records</p></div></div><div id="recruitment-list" class="empty-state">No applications are currently available.</div></article></section>
+        <section class="page player-hidden" id="page-recruitment"><div class="page-heading"><div><div class="eyebrow">PEOPLE / RECRUITMENT</div><h1>Recruitment</h1><p>Review recruitment activity and applications.</p></div></div><article class="panel"><div class="panel-head"><div><h2>Applications</h2><p>Application records</p></div></div><div id="recruitment-list" class="empty-state">No applications are currently available.</div></article></section>
         <section class="page" id="page-mdt"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / FIELD TOOLS</div><h1>Unit MDT</h1><p>Mobile data terminal workspace.</p></div></div><article class="panel"><h2>MDT workspace</h2><div class="empty-state">The MDT interface is a planned module and is not connected yet.</div></article></section>
         <section class="page" id="page-cad"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / DISPATCH</div><h1>CAD / Dispatch</h1><p>Computer-aided dispatch workspace.</p></div></div><article class="panel"><h2>Dispatch workspace</h2><div class="empty-state">CAD and dispatch functionality is a planned module and is not connected yet.</div></article></section>
         <section class="page" id="page-pnc"><div class="page-heading"><div><div class="eyebrow">OPERATIONS / RECORDS</div><h1>PNC records</h1><p>Search and review authorised player records.</p></div></div><article class="panel"><h2>PNC workspace</h2><div class="empty-state">PNC records are a planned module and are not connected yet.</div></article></section>
