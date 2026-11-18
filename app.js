@@ -62,6 +62,16 @@ function showPage(page) {
 }
 async function loadProfile(user) {
   currentUser = user;
+  // For Discord OAuth members, securely provision/refresh their profile from the
+  // Discord identity in their verified Supabase session. The RPC checks whitelist status.
+  if (user.app_metadata?.provider === "discord") {
+    const { error: syncError } = await supabaseClient.rpc("lcfms_sync_discord_member_profile");
+    if (syncError) {
+      await supabaseClient.auth.signOut();
+      message("Your Discord account is not linked to an approved whitelist member. Contact LCFMS management.");
+      return;
+    }
+  }
   const { data, error } = await supabaseClient.from("profiles")
     .select("display_name,rank_name,role,access_status").eq("id", user.id).single();
   if (error || !data || data.access_status !== "approved") {
@@ -73,6 +83,21 @@ async function loadProfile(user) {
   showPortal(data);
   if (data.role === "owner") loadMemberNumbers();
 }
+const discordLoginButton = $("#discord-login");
+if (discordLoginButton) discordLoginButton.addEventListener("click", async () => {
+  if (!supabaseClient) { message("Database connection is not configured. Check config.js."); return; }
+  discordLoginButton.disabled = true;
+  discordLoginButton.textContent = "Connecting to Discord…";
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "discord",
+    options: { redirectTo: window.location.origin + "/" }
+  });
+  if (error) {
+    message("Discord sign-in failed: " + error.message);
+    discordLoginButton.disabled = false;
+    discordLoginButton.textContent = "Continue with Discord";
+  }
+});
 $("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault(); message("");
   if (!supabaseClient) { message("Database connection is not configured. Check config.js."); return; }
@@ -183,6 +208,9 @@ if(linkDiscordButton) linkDiscordButton.addEventListener("click",startDiscordRev
 async function handleDiscordOAuthCallback(session){
  const params=new URLSearchParams(window.location.search);
  const code=params.get("code"), returnedState=params.get("state"), oauthError=params.get("error");
+ // Supabase handles Discord sign-in callback codes itself. Only handle the
+ // separate, signed state used by the reviewer-account linking flow.
+ if(!returnedState)return;
  if(!code&&!oauthError)return;
  const cleanUrl=window.location.origin+window.location.pathname;
  if(oauthError){
