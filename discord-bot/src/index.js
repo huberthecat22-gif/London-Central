@@ -74,7 +74,7 @@ async function syncWhitelistReviewerRole(){
 async function processApprovedApplications(){
  const {data:applications,error}=await db.from("whitelist_applications")
   .select("id,discord_user_id,roblox_username,status")
-  .eq("status","approved").not("discord_user_id","is",null).limit(100);
+  .eq("status","approved").is("processed_at",null).not("discord_user_id","is",null).limit(100);
  if(error) throw error;
  const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
  for(const application of applications||[]){
@@ -102,6 +102,10 @@ async function processApprovedApplications(){
     const role=await guild.roles.fetch(process.env.DISCORD_WHITELIST_ROLE_ID);
     if(role&&!member.roles.cache.has(role.id)) await member.roles.add(role,"LCFMS website whitelist approved");
    }
+   const {error:processedError}=await db.from("whitelist_applications")
+    .update({processed_at:new Date().toISOString()}).eq("id",application.id).eq("status","approved");
+   if(processedError) throw processedError;
+   console.log("Whitelist application synced:",application.id,application.discord_user_id);
   }catch(error){console.error("Approved whitelist sync failed",application.id,application.discord_user_id,error.message);}
  }
 }
