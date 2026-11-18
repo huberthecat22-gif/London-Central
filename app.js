@@ -5,6 +5,7 @@ const configured = typeof cfg.SUPABASE_URL === "string" && cfg.SUPABASE_URL.star
 let supabaseClient = null;
 let currentUser = null;
 let currentProfileRole = null;
+let currentCanReviewWhitelist = false;
 if (configured && window.supabase) supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 function message(text) { $("#login-message").textContent = text || ""; }
@@ -40,8 +41,11 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   $("#public-whitelist-form").reset();
   status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
 });
-function showPortal(profile) {
+function showPortal(profile, canReviewWhitelist) {
   document.querySelectorAll(".owner-only").forEach(el => el.classList.toggle("hidden", profile.role !== "owner"));
+  document.querySelectorAll(".reviewer-only").forEach(el => el.classList.toggle("hidden", !canReviewWhitelist));
+  $("#page-member-numbers").classList.toggle("hidden", profile.role !== "owner");
+  $("#page-whitelist").classList.toggle("hidden", !canReviewWhitelist);
   $("#public-home").classList.add("hidden");
   $("#public-whitelist").classList.add("hidden");
   $("#login").classList.add("hidden");
@@ -54,6 +58,8 @@ function showPortal(profile) {
   loadWhitelistApplications();
 }
 function showPage(page) {
+  if (page === "whitelist" && !currentCanReviewWhitelist) page = "dashboard";
+  if (page === "member-numbers" && currentProfileRole !== "owner") page = "dashboard";
   document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${page}`));
   document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("active", el.dataset.page === page && el.classList.contains("nav-link")));
   const active = document.querySelector(`.nav-link[data-page="${page}"]`);
@@ -80,7 +86,9 @@ async function loadProfile(user) {
     return;
   }
   currentProfileRole = data.role;
-  showPortal(data);
+  const { data: reviewPermission } = await supabaseClient.rpc("lcfms_can_review_whitelist");
+  currentCanReviewWhitelist = reviewPermission === true;
+  showPortal(data, currentCanReviewWhitelist);
   if (data.role === "owner") loadMemberNumbers();
 }
 const discordLoginButton = $("#discord-login");
