@@ -17,9 +17,28 @@ async function getMemberRecord(discordUserId){
  return data;
 }
 async function syncNickname(member,record){
- if(!record||!record.member_number)return;
- const nickname=record.custom_nickname||`[${String(record.member_number).padStart(4,"0")}] ${record.custom_prefix?record.custom_prefix+" ":""}${record.discord_display_name||record.discord_username}${record.custom_suffix?" "+record.custom_suffix:""}`;
- if(member.manageable&&member.nickname!==nickname) await member.setNickname(nickname.slice(0,32),"LCFMS approved member number");
+ if(!record||!record.member_number||!member.manageable)return;
+ const nickname=(record.nickname||record.custom_nickname||`[${String(record.member_number).padStart(4,"0")}] ${record.custom_prefix?record.custom_prefix+" ":""}${record.discord_display_name||record.discord_username}${record.custom_suffix?" "+record.custom_suffix:""}`).slice(0,32);
+ if(member.nickname!==nickname) await member.setNickname(nickname,"LCFMS member number updated");
+ const {error}=await db.from("discord_members").update({nickname_sync_pending:false}).eq("discord_user_id",member.id);
+ if(error) throw error;
+}
+
+async function processPendingNicknameUpdates(){
+ const {data,error}=await db.from("discord_members")
+  .select("discord_user_id,member_number,nickname,custom_nickname,custom_prefix,custom_suffix,discord_display_name,discord_username")
+  .eq("nickname_sync_pending",true).limit(50);
+ if(error) throw error;
+ if(!data?.length)return;
+ const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+ for(const record of data){
+  try{
+   const member=await guild.members.fetch(record.discord_user_id);
+   if(!member)continue;
+   await syncNickname(member,record);
+   console.log("Discord nickname synced:",record.discord_user_id,record.member_number);
+  }catch(error){console.error("Discord nickname sync failed:",record.discord_user_id,error.message);}
+ }
 }
 
 // Keep Supabase's reviewer roster in sync with the configured Discord role.
@@ -103,6 +122,7 @@ client.once(Events.ClientReady,async ready=>{
  await processApprovedApplications();
  await syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message));
  setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
+ setInterval(()=>processPendingNicknameUpdates().catch(error=>console.error("Pending nickname sync failed",error.message)),10000);
  setInterval(()=>syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message)),60000);
 });
 
