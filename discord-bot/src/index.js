@@ -132,18 +132,15 @@ async function handleTrainingButton(interaction){
   if(error)return interaction.reply({content:"Your withdrawal could not be processed. Please try again.",ephemeral:true}),true;
   return interaction.reply({content:"You have withdrawn from **"+notice.module_name+"**.",ephemeral:true}),true;
  }
- const {count,error:countError}=await db.from("training_notice_signups")
-  .select("id",{count:"exact",head:true}).eq("training_notice_id",noticeId);
- if(countError)return interaction.reply({content:"Could not check the available training places. Please try again.",ephemeral:true}),true;
- const {data:existing}=await db.from("training_notice_signups").select("id")
-  .eq("training_notice_id",noticeId).eq("discord_user_id",interaction.user.id).maybeSingle();
- if(existing)return interaction.reply({content:"You are already signed up for this training.",ephemeral:true}),true;
- if(Number(count||0)>=Number(notice.maximum_trainees))
-  return interaction.reply({content:"Sorry, this training session has reached its maximum number of trainees.",ephemeral:true}),true;
- const {error:signupError}=await db.from("training_notice_signups").insert({
-  training_notice_id:noticeId,discord_user_id:interaction.user.id,discord_username:interaction.user.username
+ const {data:signupResult,error:signupError}=await db.rpc("lcfms_training_signup",{
+  p_training_notice_id:noticeId,
+  p_discord_user_id:interaction.user.id,
+  p_discord_username:interaction.user.username
  });
- if(signupError)return interaction.reply({content:"Your sign-up could not be saved. You may already be registered.",ephemeral:true}),true;
+ if(signupError)return interaction.reply({content:"Your sign-up could not be saved. Please try again.",ephemeral:true}),true;
+ if(signupResult==="full")return interaction.reply({content:"Sorry, this training session has reached its maximum number of trainees.",ephemeral:true}),true;
+ if(signupResult==="already_signed_up")return interaction.reply({content:"You are already signed up for this training.",ephemeral:true}),true;
+ if(signupResult!=="signed_up")return interaction.reply({content:"This training notice is no longer available.",ephemeral:true}),true;
  return interaction.reply({content:"You are signed up for **"+notice.module_name+"**. See you there!",ephemeral:true}),true;
 }
 
