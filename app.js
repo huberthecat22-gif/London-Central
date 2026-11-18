@@ -114,6 +114,13 @@ async function loadProfile(user, openPortal = false, staffOnly = false) {
     message("Your account is awaiting approval or is not authorised. Contact LCFMS management.");
     return;
   }
+  const staffRoles = ["owner","senior_management","management","staff"];
+  if (staffOnly && !staffRoles.includes(data.role)) {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    message("Staff access denied. Your account does not have an authorised LCFMS staff role.");
+    return;
+  }
   currentProfileRole = data.role;
   const { data: reviewPermission } = await supabaseClient.rpc("lcfms_can_review_whitelist");
   currentCanReviewWhitelist = reviewPermission === true;
