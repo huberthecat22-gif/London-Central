@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { createClient } = require("@supabase/supabase-js");
 
 const required=["DISCORD_BOT_TOKEN","DISCORD_CLIENT_ID","DISCORD_GUILD_ID","SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"];
@@ -70,6 +70,83 @@ async function syncWhitelistReviewerRole(){
  console.log("Whitelist reviewer role synced:",reviewers.length,"members");
 }
 
+
+const TRAINING_CHANNEL_ID=process.env.DISCORD_TRAINING_CHANNEL_ID||"1562246158472978462";
+function trainingEmbed(notice){
+ const date=notice.training_date?new Date(notice.training_date+"T00:00:00").toLocaleDateString("en-GB"):"Not set";
+ const time=String(notice.training_time||"").slice(0,5)||"Not set";
+ return new EmbedBuilder()
+  .setColor(0x263f56)
+  .setTitle("📋 Training Notice — "+notice.module_name)
+  .setDescription("A new London Central training session has been scheduled. Use the buttons below to register or withdraw.")
+  .addFields(
+   {name:"Training module:",value:notice.module_name||"—",inline:false},
+   {name:"Date:",value:date,inline:true},
+   {name:"Time:",value:time,inline:true},
+   {name:"Prerequisites:",value:notice.prerequisites||"None",inline:false},
+   {name:"Maximum trainees:",value:String(notice.maximum_trainees??"—"),inline:true},
+   {name:"Trainer(s):",value:notice.trainers||"—",inline:false},
+   {name:"Observer(s):",value:notice.observers_na?"N/A":(notice.observers||"—"),inline:false},
+   {name:"Location for training:",value:notice.location||"Waiting Room",inline:false}
+  )
+  .setFooter({text:"LCFMS • Training and Development"});
+}
+function trainingButtons(id){
+ return new ActionRowBuilder().addComponents(
+  new ButtonBuilder().setCustomId("training_signup:"+id).setLabel("Sign Up").setStyle(ButtonStyle.Success),
+  new ButtonBuilder().setCustomId("training_withdraw:"+id).setLabel("Withdraw").setStyle(ButtonStyle.Primary)
+ );
+}
+async function publishPendingTrainingNotices(){
+ const {data:notices,error}=await db.from("training_notices")
+  .select("id,module_name,training_date,training_time,prerequisites,maximum_trainees,trainers,observers,observers_na,location")
+  .is("discord_message_id",null).order("created_at",{ascending:true}).limit(10);
+ if(error)throw error;
+ if(!notices?.length)return;
+ const channel=await client.channels.fetch(TRAINING_CHANNEL_ID);
+ if(!channel||!channel.isTextBased())throw new Error("Training notices channel is unavailable or not a text channel.");
+ for(const notice of notices){
+  try{
+   const message=await channel.send({embeds:[trainingEmbed(notice)],components:[trainingButtons(notice.id)]});
+   const {error:updateError}=await db.from("training_notices").update({
+    discord_message_id:message.id,discord_channel_id:channel.id
+   }).eq("id",notice.id).is("discord_message_id",null);
+   if(updateError)throw updateError;
+   console.log("Training notice published to Discord:",notice.id,message.id);
+  }catch(error){console.error("Training notice publish failed:",notice.id,error.message);}
+ }
+}
+async function handleTrainingButton(interaction){
+ const [action,noticeId]=interaction.customId.split(":");
+ if(!["training_signup","training_withdraw"].includes(action)||!noticeId)return false;
+ const {data:notice,error:noticeError}=await db.from("training_notices")
+  .select("id,module_name,maximum_trainees").eq("id",noticeId).maybeSingle();
+ if(noticeError||!notice)return interaction.reply({content:"This training notice is no longer available.",ephemeral:true}),true;
+ const {data:member,error:memberError}=await db.from("discord_members")
+  .select("whitelist_status").eq("discord_user_id",interaction.user.id).maybeSingle();
+ if(memberError||member?.whitelist_status!=="approved")
+  return interaction.reply({content:"Only approved LCFMS members can register for training.",ephemeral:true}),true;
+ if(action==="training_withdraw"){
+  const {error}=await db.from("training_notice_signups").delete()
+   .eq("training_notice_id",noticeId).eq("discord_user_id",interaction.user.id);
+  if(error)return interaction.reply({content:"Your withdrawal could not be processed. Please try again.",ephemeral:true}),true;
+  return interaction.reply({content:"You have withdrawn from **"+notice.module_name+"**.",ephemeral:true}),true;
+ }
+ const {count,error:countError}=await db.from("training_notice_signups")
+  .select("id",{count:"exact",head:true}).eq("training_notice_id",noticeId);
+ if(countError)return interaction.reply({content:"Could not check the available training places. Please try again.",ephemeral:true}),true;
+ const {data:existing}=await db.from("training_notice_signups").select("id")
+  .eq("training_notice_id",noticeId).eq("discord_user_id",interaction.user.id).maybeSingle();
+ if(existing)return interaction.reply({content:"You are already signed up for this training.",ephemeral:true}),true;
+ if(Number(count||0)>=Number(notice.maximum_trainees))
+  return interaction.reply({content:"Sorry, this training session has reached its maximum number of trainees.",ephemeral:true}),true;
+ const {error:signupError}=await db.from("training_notice_signups").insert({
+  training_notice_id:noticeId,discord_user_id:interaction.user.id,discord_username:interaction.user.username
+ });
+ if(signupError)return interaction.reply({content:"Your sign-up could not be saved. You may already be registered.",ephemeral:true}),true;
+ return interaction.reply({content:"You are signed up for **"+notice.module_name+"**. See you there!",ephemeral:true}),true;
+}
+
 // Approved website applications are the only trigger for allocating a new number.
 async function processApprovedApplications(){
  const {data:applications,error}=await db.from("whitelist_applications")
@@ -136,6 +213,10 @@ client.on(Events.GuildMemberAdd,member=>{
 });
 
 client.on(Events.InteractionCreate,async interaction=>{
+ if(interaction.isButton()){
+  try{if(await handleTrainingButton(interaction))return;}catch(error){console.error("Training button failed:",error);if(!interaction.replied)await interaction.reply({content:"Something went wrong. Please contact LCFMS management.",ephemeral:true}).catch(()=>{});}
+  return;
+ }
  if(!interaction.isChatInputCommand())return;
  try{
   if(interaction.commandName!=="member")return;
