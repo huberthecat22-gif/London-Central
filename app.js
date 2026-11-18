@@ -440,7 +440,7 @@ function openFmsRecordForm(module){
  const def=FMS_MODULES[module];if(!def)return;
  const values={};
  for(const field of def.fields){
-  let value=window.prompt(field[1]+(field[2]?" ("+field[2].split("|").join(" / ")+")":""),field[0]==="status"?(field[2].split("|")[0]:""):"");
+  let value=window.prompt(field[1]+(field[2]?" ("+field[2].split("|").join(" / ")+")":""),field[0]==="status" ? field[2].split("|")[0] : "");
   if(value===null)return;
   if(field[2]&&!field[2].split("|").includes(value)){window.alert("Invalid status. Use: "+field[2].split("|").join(", "));return;}
   values[field[0]]=value.trim();
