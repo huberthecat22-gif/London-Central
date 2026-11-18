@@ -231,7 +231,17 @@ if(refreshMemberNumbers)refreshMemberNumbers.addEventListener("click",loadMember
 const TRAINING_NOTICE_CREATORS = ["1562514652297035787","1562514998146764810","1562514757259632821"];
 function signedInDiscordId(){
  const u=currentUser||{};
- return String(u.app_metadata?.provider_id||u.user_metadata?.provider_id||u.user_metadata?.sub||"");
+ const discordIdentity=(u.identities||[]).find(identity=>identity.provider==="discord");
+ const identityData=discordIdentity?.identity_data||{};
+ return String(
+  u.app_metadata?.provider_id||
+  u.user_metadata?.provider_id||
+  identityData.sub||
+  identityData.id||
+  u.user_metadata?.sub||
+  u.user_metadata?.id||
+  ""
+ );
 }
 function canCreateTrainingNotice(){return TRAINING_NOTICE_CREATORS.includes(signedInDiscordId());}
 function setupTrainingNoticeAccess(){
