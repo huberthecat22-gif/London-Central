@@ -110,7 +110,15 @@ begin
   if v_old = v_new then return; end if;
 
   insert into public.member_number_registry(member_number, discord_user_id)
-  values (v_new, p_discord_user_id);
+  values (v_new, p_discord_user_id)
+  on conflict (member_number) do nothing;
+
+  if not exists (
+    select 1 from public.member_number_registry
+    where member_number = v_new and discord_user_id = p_discord_user_id
+  ) then
+    raise exception 'That member number has already been permanently reserved';
+  end if;
 
   update public.discord_members
   set member_number = v_new,
