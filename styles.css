@@ -165,3 +165,8 @@ body{background:#080d14;color:var(--text)}
 .main-area{min-width:0}
 .page-wrap{width:100%;max-width:1400px;margin-left:auto;margin-right:auto;padding-left:38px;padding-right:38px}
 @media(max-width:850px){.page-wrap{max-width:none;padding-left:18px;padding-right:18px}}
+
+
+/* Add breathing room above the dashboard content. */
+.page-wrap{padding-top:54px}
+@media(max-width:850px){.page-wrap{padding-top:38px}}
