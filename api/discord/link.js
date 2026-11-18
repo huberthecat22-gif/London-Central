@@ -31,7 +31,7 @@ function verifyState(state, userId) {
   if (typeof state !== "string" || !state.includes(".")) return false;
   const [payload, supplied] = state.split(".");
   if (!payload || !supplied) return false;
-  const expected = crypto.createHmac("sha256", process.env.DISCORD_OAUTH_STATE_SECRET).update(payload).digest();
+  const expected = crypto.createHmac("sha256", process.env.SUPABASE_SERVICE_ROLE_KEY).update(payload).digest();
   let actual;
   try { actual = Buffer.from(supplied, "base64url"); } catch { return false; }
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return false;
