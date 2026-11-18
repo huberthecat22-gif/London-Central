@@ -15,7 +15,7 @@
       <button id="verify-discord" class="primary full" type="button">Verify with Discord</button>
       <button id="open-whitelist" class="primary full hidden" type="button">Whitelist</button>
       <button id="open-signin" class="secondary full hidden" type="button">Sign In</button>
-      <button id="open-signup" class="secondary full hidden" type="button">Staff Sign Up</button>
+      <button id="open-signup" class="secondary full" type="button">Staff Sign In</button>
       <div id="access-message" class="login-foot" role="status" aria-live="polite">Verify with the Discord account you use in the London Central server.</div>
       <div class="login-foot">After approval, members do not need to sign up separately or submit another whitelist application.</div>
     </div>
@@ -47,7 +47,7 @@
       <button id="discord-login" class="primary full" type="button">Continue with Discord</button>
       <div class="login-foot">Approved whitelisted players get member access only. Staff permissions remain separate.</div>
       <div id="login-message" role="status" aria-live="polite"></div>
-      <details class="staff-email-login"><summary>Staff email sign in</summary>
+      <details id="staff-email-login" class="staff-email-login"><summary>Staff email sign in</summary>
       <form id="login-form">
         <label>Email address<input id="email" type="email" required autocomplete="username"></label>
         <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
