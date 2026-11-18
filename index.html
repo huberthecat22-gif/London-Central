@@ -26,7 +26,9 @@
       <p>Enter your Roblox and Discord details. No email, password or application answers are required.</p>
       <form id="public-whitelist-form">
         <label>Roblox username<input id="public-roblox" type="text" maxlength="20" required autocomplete="off" placeholder="Your Roblox username"></label>
-        <label>Discord username or ID<input id="public-discord" type="text" maxlength="80" required autocomplete="off" placeholder="Your Discord username or user ID"></label>
+        <label>Discord username<input id="public-discord" type="text" maxlength="80" required autocomplete="off" placeholder="Your Discord username"></label>
+        <label>Discord User ID<input id="public-discord-id" type="text" inputmode="numeric" maxlength="20" required autocomplete="off" placeholder="17–20 digit Discord User ID"></label>
+        <p class="login-foot">Enable Developer Mode in Discord, then right-click your profile and choose Copy User ID.</p>
         <button class="primary full" type="submit">Submit Whitelist</button>
         <div id="public-whitelist-message" role="status" aria-live="polite"></div>
       </form>
