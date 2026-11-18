@@ -63,7 +63,7 @@ function showPortal(profile, canReviewWhitelist) {
 function showPage(page) {
   if (page === "whitelist" && !currentCanReviewWhitelist) page = "dashboard";
   if (page === "member-numbers" && currentProfileRole !== "owner") page = "dashboard";
-  if (page === "staff" && currentProfileRole === "player") page = "dashboard";
+  if (["staff","recruitment"].includes(page) && currentProfileRole === "player") page = "dashboard";
   document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${page}`));
   document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("active", el.dataset.page === page && el.classList.contains("nav-link")));
   const active = document.querySelector(`.nav-link[data-page="${page}"]`);
