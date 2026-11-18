@@ -87,7 +87,12 @@ $("#signout").addEventListener("click", async () => {
 (async () => {
   if (!configured || !window.supabase) { message("Setup required: check the Supabase project URL and publishable key in config.js."); return; }
   const { data } = await supabaseClient.auth.getSession();
-  if (data.session) await loadProfile(data.session.user);
+  if (data.session) {
+    await loadProfile(data.session.user);
+    await handleDiscordOAuthCallback(data.session);
+  } else {
+    await handleDiscordOAuthCallback(null);
+  }
 })();
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -117,13 +122,55 @@ async function loadWhitelistApplications(){
 const refreshWhitelist=$("#refresh-whitelist");if(refreshWhitelist)refreshWhitelist.addEventListener("click",loadWhitelistApplications);
 
 const linkDiscordButton=$("#link-discord-reviewer");
-if(linkDiscordButton) linkDiscordButton.addEventListener("click",async()=>{
- const code=window.prompt("In your Discord server, run /link and enter the 8-character code it gives you:");
- if(!code)return;
- linkDiscordButton.disabled=true;
- const {error}=await supabaseClient.rpc("lcfms_link_discord_account",{p_code:code.trim()});
- linkDiscordButton.disabled=false;
- if(error){window.alert("Discord link failed: "+error.message);return;}
- window.alert("Discord account linked successfully. If your Discord account has the whitelist reviewer role, you can now approve and reject applications.");
- await loadWhitelistApplications();
-});
+const DISCORD_REVIEW_ROLE_ID="1572689837176131696";
+function startDiscordReviewerLink(){
+ if(!supabaseClient||!currentUser){window.alert("Please sign in to LCFMS first.");return;}
+ const clientId=window.LCFMS_CONFIG?.DISCORD_CLIENT_ID;
+ if(!clientId){window.alert("Discord connection is not configured yet. Please contact the LCFMS owner.");return;}
+ const state=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,"0")).join("");
+ sessionStorage.setItem("lcfms_discord_oauth_state",state);
+ const redirectUri=window.location.origin+"/";
+ const params=new URLSearchParams({
+  client_id:clientId,
+  redirect_uri:redirectUri,
+  response_type:"code",
+  scope:"identify guilds.members.read",
+  state
+ });
+ window.location.href="https://discord.com/oauth2/authorize?"+params.toString();
+}
+if(linkDiscordButton) linkDiscordButton.addEventListener("click",startDiscordReviewerLink);
+
+async function handleDiscordOAuthCallback(session){
+ const params=new URLSearchParams(window.location.search);
+ const code=params.get("code"), returnedState=params.get("state"), oauthError=params.get("error");
+ if(!code&&!oauthError)return;
+ const cleanUrl=window.location.origin+window.location.pathname;
+ if(oauthError){
+  window.history.replaceState({},document.title,cleanUrl);
+  window.alert("Discord connection was cancelled or denied.");
+  return;
+ }
+ const expectedState=sessionStorage.getItem("lcfms_discord_oauth_state");
+ sessionStorage.removeItem("lcfms_discord_oauth_state");
+ if(!expectedState||!returnedState||expectedState!==returnedState){
+  window.history.replaceState({},document.title,cleanUrl);
+  window.alert("Discord connection could not be verified. Please try again.");
+  return;
+ }
+ window.history.replaceState({},document.title,cleanUrl);
+ if(!session?.access_token){window.alert("Please sign in to LCFMS, then connect Discord again.");return;}
+ if(linkDiscordButton){linkDiscordButton.disabled=true;linkDiscordButton.textContent="Connecting…";}
+ try{
+  const response=await fetch("/api/discord/link",{
+   method:"POST",
+   headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+   body:JSON.stringify({code,redirect_uri:window.location.origin+"/"})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"Discord connection failed.");
+  window.alert("Discord connected. Your reviewer access will activate when the bot completes its next role sync.");
+  await loadWhitelistApplications();
+ }catch(error){window.alert(error.message);}
+ finally{if(linkDiscordButton){linkDiscordButton.disabled=false;linkDiscordButton.textContent="Connect Discord";}}
+}
