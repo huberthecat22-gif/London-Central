@@ -159,7 +159,7 @@ async function handleTrainingButton(interaction){
   const {error}=await db.from("training_notice_signups").delete()
    .eq("training_notice_id",noticeId).eq("discord_user_id",interaction.user.id);
   if(error)return interaction.reply({content:"Your withdrawal could not be processed. Please try again.",ephemeral:true}),true;
-  await refreshTrainingNoticeMessage(noticeId);
+  await refreshTrainingNoticeMessage(noticeId).catch(error=>console.error("Training counter refresh failed after withdrawal:",error.message));
   return interaction.reply({content:"You have withdrawn from **"+notice.module_name+"**.",ephemeral:true}),true;
  }
  const {data:signupResult,error:signupError}=await db.rpc("lcfms_training_signup",{
@@ -171,6 +171,7 @@ async function handleTrainingButton(interaction){
  if(signupResult==="full")return interaction.reply({content:"Sorry, this training session has reached its maximum number of trainees.",ephemeral:true}),true;
  if(signupResult==="already_signed_up")return interaction.reply({content:"You are already signed up for this training.",ephemeral:true}),true;
  if(signupResult!=="signed_up")return interaction.reply({content:"This training notice is no longer available.",ephemeral:true}),true;
+ await refreshTrainingNoticeMessage(noticeId).catch(error=>console.error("Training counter refresh failed after sign-up:",error.message));
  return interaction.reply({content:"You are signed up for **"+notice.module_name+"**. See you there!",ephemeral:true}),true;
 }
 
