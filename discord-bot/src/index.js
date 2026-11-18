@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } = require("discord.js");
 const { createClient } = require("@supabase/supabase-js");
+const { randomBytes } = require("crypto");
 
 const required=["DISCORD_BOT_TOKEN","DISCORD_CLIENT_ID","DISCORD_GUILD_ID","SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing environment variable: "+key);
@@ -8,7 +9,8 @@ for(const key of required) if(!process.env[key]) throw new Error("Missing enviro
 const db=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
 const commands=[
- new SlashCommandBuilder().setName("member").setDescription("Check your LCFMS member number")
+ new SlashCommandBuilder().setName("member").setDescription("Check your LCFMS member number"),
+ new SlashCommandBuilder().setName("link").setDescription("Generate a secure code to link your Discord to LCFMS")
 ].map(c=>c.toJSON());
 
 async function getMemberRecord(discordUserId){
@@ -106,8 +108,18 @@ client.on(Events.GuildMemberAdd,member=>{
 });
 
 client.on(Events.InteractionCreate,async interaction=>{
- if(!interaction.isChatInputCommand()||interaction.commandName!=="member")return;
+ if(!interaction.isChatInputCommand())return;
  try{
+  if(interaction.commandName==="link"){
+   const code=randomBytes(4).toString("hex").toUpperCase();
+   const {error}=await db.from("discord_link_codes").insert({
+    code,discord_user_id:interaction.user.id,
+    expires_at:new Date(Date.now()+10*60*1000).toISOString()
+   });
+   if(error) throw error;
+   return interaction.reply({content:`Your LCFMS link code is **${code}**. Sign in to LCFMS, open Whitelist Management, and choose Link Discord. This code expires in 10 minutes and can only be used once.`,ephemeral:true});
+  }
+  if(interaction.commandName!=="member")return;
   const record=await getMemberRecord(interaction.user.id);
   if(!record||!record.member_number){
    return interaction.reply({content:"You don't have an LCFMS member number yet. Submit your whitelist application on the LCFMS website. A number is assigned only after an authorised manager approves it.",ephemeral:true});
