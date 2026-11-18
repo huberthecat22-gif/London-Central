@@ -6,6 +6,7 @@ let supabaseClient = null;
 let currentUser = null;
 let currentProfileRole = null;
 let currentCanReviewWhitelist = false;
+let currentAccessState = "unknown";
 if (configured && window.supabase) supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 function message(text) { $("#login-message").textContent = text || ""; }
@@ -13,8 +14,23 @@ function showPublicView(view) {
   ["public-home","public-whitelist","login"].forEach(id => $("#"+id).classList.toggle("hidden", id !== view));
 }
 $("#open-whitelist").addEventListener("click",()=>showPublicView("public-whitelist"));
-$("#open-signup").addEventListener("click",()=>{showPublicView("login");message("");$("#login").querySelector("h1").textContent="Create your LCFMS account";$("#login").querySelector("p").textContent="Only Discord accounts with an approved whitelist application can create a member account.";$("#discord-login").textContent="Sign Up with Discord";});
-$("#open-signin").addEventListener("click",()=>{showPublicView("login");message("");$("#login").querySelector("h1").textContent="LCFMS sign in";$("#login").querySelector("p").textContent="Sign in with the Discord account used on your approved whitelist application. Staff can use their staff login.";$("#discord-login").textContent="Continue with Discord";});
+function renderAccessOptions(state){
+  currentAccessState=state;
+  $("#verify-discord").classList.toggle("hidden",state!=="unknown");
+  $("#open-whitelist").classList.toggle("hidden",state!=="whitelist");
+  $("#open-signin").classList.toggle("hidden",!["member","staff","owner"].includes(state));
+  $("#open-signup").classList.toggle("hidden",!["staff","owner"].includes(state));
+  $("#access-message").textContent=state==="whitelist"?"Your Discord account is not yet fully whitelisted. Submit your application here.":state==="member"?"Your whitelist is approved. Sign in to access the FMS.":state==="staff"||state==="owner"?"Your whitelist is approved and your Discord ID is authorised for staff access.":"Verify with the Discord account you use in the London Central server.";
+}
+async function beginDiscordVerification(){
+  if(!supabaseClient){$("#access-message").textContent="Database connection is not configured.";return;}
+  const button=$("#verify-discord");button.disabled=true;button.textContent="Connecting to Discord…";
+  const {error}=await supabaseClient.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+"/"}});
+  if(error){$("#access-message").textContent="Discord verification failed: "+error.message;button.disabled=false;button.textContent="Verify with Discord";}
+}
+$("#verify-discord").addEventListener("click",beginDiscordVerification);
+$("#open-signup").addEventListener("click",async()=>{if(currentUser)await loadProfile(currentUser,true);});
+$("#open-signin").addEventListener("click",async()=>{if(currentUser)await loadProfile(currentUser,true);});
 $("#back-login-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#public-whitelist-form").addEventListener("submit",async event=>{
@@ -75,15 +91,18 @@ function showPage(page) {
   $("#crumb").textContent = active ? active.textContent.trim() : page;
   $("#sidebar").classList.remove("open");
 }
-async function loadProfile(user) {
+async function loadProfile(user, openPortal = false) {
   currentUser = user;
   // For Discord OAuth members, securely provision/refresh their profile from the
   // Discord identity in their verified Supabase session. The RPC checks whitelist status.
   if (user.app_metadata?.provider === "discord") {
     const { error: syncError } = await supabaseClient.rpc("lcfms_sync_discord_member_profile");
     if (syncError) {
-      await supabaseClient.auth.signOut();
-      message("Your Discord account does not have an approved whitelist application. Please contact LCFMS management if you believe this is wrong.");
+      const {data: accessState, error: stateError} = await supabaseClient.rpc("lcfms_get_public_access_state");
+      if (!stateError && accessState === "whitelist") {
+        currentUser=user; renderAccessOptions("whitelist"); showPublicView("public-home"); return;
+      }
+      message(stateError ? "We could not verify your Discord access. Please try again." : "Your Discord access could not be confirmed. Contact LCFMS management.");
       return;
     }
   }
@@ -97,6 +116,11 @@ async function loadProfile(user) {
   currentProfileRole = data.role;
   const { data: reviewPermission } = await supabaseClient.rpc("lcfms_can_review_whitelist");
   currentCanReviewWhitelist = reviewPermission === true;
+  if (!openPortal && user.app_metadata?.provider === "discord") {
+    const {data: accessState,error:stateError}=await supabaseClient.rpc("lcfms_get_public_access_state");
+    if(stateError){message("Could not verify your access options: "+stateError.message);return;}
+    currentUser=user; renderAccessOptions(accessState); showPublicView("public-home"); return;
+  }
   showPortal(data, currentCanReviewWhitelist);
   if (data.role === "owner") loadMemberNumbers();
 }
@@ -134,9 +158,11 @@ $("#signout").addEventListener("click", async () => {
   if (!configured || !window.supabase) { message("Setup required: check the Supabase project URL and publishable key in config.js."); return; }
   const { data } = await supabaseClient.auth.getSession();
   if (data.session) {
-    await loadProfile(data.session.user);
+    currentUser=data.session.user;
+    await loadProfile(data.session.user,false);
     await handleDiscordOAuthCallback(data.session);
   } else {
+    renderAccessOptions("unknown");
     await handleDiscordOAuthCallback(null);
   }
 })();
