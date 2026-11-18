@@ -23,7 +23,7 @@ function signState(userId) {
   const issued = Date.now().toString();
   const nonce = crypto.randomBytes(24).toString("hex");
   const payload = Buffer.from(userId + ":" + issued + ":" + nonce).toString("base64url");
-  const signature = crypto.createHmac("sha256", process.env.DISCORD_OAUTH_STATE_SECRET).update(payload).digest("base64url");
+  const signature = crypto.createHmac("sha256", process.env.SUPABASE_SERVICE_ROLE_KEY).update(payload).digest("base64url");
   return payload + "." + signature;
 }
 
@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return send(res, 405, { error: "Method not allowed." });
 
-  const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_GUILD_ID", "DISCORD_WHITELIST_REVIEW_ROLE_ID", "DISCORD_OAUTH_STATE_SECRET", "DISCORD_REDIRECT_URI"];
+  const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_GUILD_ID", "DISCORD_REDIRECT_URI"];
   for (const key of required) if (!process.env[key]) return send(res, 500, { error: "Server setup is incomplete: " + key + " is missing." });
 
   try {
@@ -95,7 +95,8 @@ module.exports = async function handler(req, res) {
     const guildMember = await guildMemberResponse.json();
     if (!discordUserResponse.ok || !discordUser.id) return send(res, 400, { error: "Discord did not return your account details." });
     if (!guildMemberResponse.ok || !Array.isArray(guildMember.roles)) return send(res, 403, { error: "Join the LCFMS Discord server before connecting your account." });
-    if (!guildMember.roles.includes(process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID)) {
+    const reviewerRoleId = process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
+    if (!guildMember.roles.includes(reviewerRoleId)) {
       return send(res, 403, { error: "Your Discord account does not have the authorised whitelist reviewer role." });
     }
 
