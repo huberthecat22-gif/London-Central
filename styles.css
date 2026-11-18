@@ -170,3 +170,23 @@ body{background:#080d14;color:var(--text)}
 /* Add breathing room above the dashboard content. */
 .page-wrap{padding-top:54px}
 @media(max-width:850px){.page-wrap{padding-top:38px}}
+
+
+/* Subtle horizontal scroll line for the top navigation selectors. */
+.side-nav{
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  flex-wrap:nowrap;
+  scrollbar-width:thin;
+  scrollbar-color:#55758b #18232d;
+  padding-bottom:4px;
+  scrollbar-gutter:stable;
+}
+.side-nav::-webkit-scrollbar{height:5px}
+.side-nav::-webkit-scrollbar-track{background:#18232d;border-radius:8px}
+.side-nav::-webkit-scrollbar-thumb{background:#55758b;border-radius:8px}
+.side-nav::-webkit-scrollbar-thumb:hover{background:#79a6c3}
+@media(max-width:850px){
+  .side-nav{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}
+}
