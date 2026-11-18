@@ -375,3 +375,63 @@ async function handleDiscordOAuthCallback(session){
  }catch(error){window.alert(error.message);}
  finally{if(linkDiscordButton){linkDiscordButton.disabled=false;linkDiscordButton.textContent="Connect Discord";}}
 }
+
+
+/* LCFMS operational records workbench. Data is stored in Supabase and protected by RLS. */
+const FMS_MODULES={
+ custody:{title:"Custody record",fields:[["title","Detainee / subject"],["reference","Custody reference"],["status","Status","Booked in|In custody|Released|Transferred"],["details","Booking notes, grounds and outcome"]]},
+ hr:{title:"Personnel record",fields:[["title","Member / subject"],["reference","Record reference"],["status","Status","Open|Under review|Approved|Rejected|Closed"],["details","Details and management decision"]]},
+ fleet:{title:"Fleet record",fields:[["title","Vehicle / callsign"],["reference","Registration / fleet ID"],["status","Status","Available|Assigned|Under repair|Out of service"],["details","Allocation, defects or maintenance notes"]]},
+ forms:{title:"Administrative form",fields:[["title","Request / form type"],["reference","Submitted by / reference"],["status","Status","Submitted|Under review|Approved|Rejected|Completed"],["details","Request details and decision"]]},
+ notifications:{title:"Force notification",fields:[["title","Notification title"],["reference","Category / reference"],["status","Status","Active|Acknowledged|Archived"],["details","Notification message"]]}
+};
+const fmsRecords={};
+function fmsCanManage(){return ["owner","senior_management","management","staff"].includes(currentProfileRole);}
+function fmsEscape(v){return esc(v);}
+async function loadFmsRecords(module){
+ const host=$("#records-"+module);if(!host||!supabaseClient)return;
+ host.textContent="Loading records…";
+ const {data,error}=await supabaseClient.from("fms_records").select("id,module,title,reference,status,details,created_at,created_by").eq("module",module).order("created_at",{ascending:false}).limit(150);
+ if(error){host.textContent="Could not load records: "+error.message;return;}
+ fmsRecords[module]=data||[];renderFmsRecords(module);
+}
+function renderFmsRecords(module){
+ const host=$("#records-"+module);if(!host)return;
+ const query=($('[data-search="'+module+'"]')?.value||"").toLowerCase();
+ const status=$('[data-filter="'+module+'"]')?.value||"";
+ const rows=(fmsRecords[module]||[]).filter(r=>(!status||r.status===status)&&[r.title,r.reference,r.details,r.status].join(" ").toLowerCase().includes(query));
+ if(!rows.length){host.innerHTML='<div class="fms-empty">No matching records. Use the create button to add the first record.</div>';return;}
+ host.innerHTML=rows.map(r=>'<article class="fms-record"><div class="fms-record-top"><div><span class="fms-kicker">'+fmsEscape(module.toUpperCase())+' / '+fmsEscape(r.reference||"NO REFERENCE")+'</span><h3>'+fmsEscape(r.title)+'</h3></div><span class="fms-status">'+fmsEscape(r.status)+'</span></div><p>'+fmsEscape(r.details||"No additional details.")+'</p><div class="fms-record-foot"><small>'+new Date(r.created_at).toLocaleString("en-GB")+'</small>'+(fmsCanManage()?'<button class="secondary fms-update" data-id="'+fmsEscape(r.id)+'" data-module="'+module+'">Update status</button>':"")+'</div></article>').join("");
+ host.querySelectorAll(".fms-update").forEach(btn=>btn.addEventListener("click",async()=>{
+  const row=(fmsRecords[module]||[]).find(x=>x.id===btn.dataset.id);if(!row||!fmsCanManage())return;
+  const options=FMS_MODULES[module].fields.find(x=>x[0]==="status")[2].split("|");
+  const next=window.prompt("Enter status: "+options.join(", "),row.status);if(next===null)return;
+  if(!options.includes(next)){window.alert("Choose one of: "+options.join(", "));return;}
+  btn.disabled=true;
+  const {error}=await supabaseClient.from("fms_records").update({status:next,updated_at:new Date().toISOString()}).eq("id",row.id);
+  if(error){window.alert("Could not update record: "+error.message);btn.disabled=false;return;}
+  await loadFmsRecords(module);
+ }));
+}
+function openFmsRecordForm(module){
+ if(!fmsCanManage()){window.alert("Only authorised staff can create or update these records.");return;}
+ const def=FMS_MODULES[module];if(!def)return;
+ const values={};
+ for(const field of def.fields){
+  let value=window.prompt(field[1]+(field[2]?" ("+field[2].split("|").join(" / ")+")":""),field[0]==="status"?(field[2].split("|")[0]:""):"");
+  if(value===null)return;
+  if(field[2]&&!field[2].split("|").includes(value)){window.alert("Invalid status. Use: "+field[2].split("|").join(", "));return;}
+  values[field[0]]=value.trim();
+ }
+ if(!values.title){window.alert("A title is required.");return;}
+ supabaseClient.from("fms_records").insert({...values,module,created_by:currentUser.id}).then(async({error})=>{
+  if(error){window.alert("Could not save record: "+error.message);return;}
+  await loadFmsRecords(module);
+ });
+}
+document.querySelectorAll(".fms-add").forEach(btn=>btn.addEventListener("click",()=>openFmsRecordForm(btn.dataset.module)));
+document.querySelectorAll(".fms-search").forEach(input=>input.addEventListener("input",()=>renderFmsRecords(input.dataset.search)));
+document.querySelectorAll(".fms-filter").forEach(input=>input.addEventListener("change",()=>renderFmsRecords(input.dataset.filter)));
+const fmsOriginalShowPage=showPage;
+showPage=function(page){fmsOriginalShowPage(page);if(FMS_MODULES[page])loadFmsRecords(page);};
+document.querySelectorAll(".fms-add").forEach(btn=>btn.classList.toggle("hidden",!fmsCanManage()));
