@@ -27,7 +27,8 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   submit.disabled=true;submit.textContent="Checking…";
   const {data,error}=await supabaseClient.rpc("lcfms_submit_public_whitelist",{
     p_roblox_username:roblox,
-    p_discord_contact:discord
+    p_discord_contact:discord,
+    p_discord_user_id:$("#public-discord-id").value.trim()
   });
   submit.disabled=false;submit.textContent="Submit Whitelist";
   if(error){status.textContent="We couldn't submit your request: "+error.message;return;}
