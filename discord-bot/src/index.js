@@ -24,7 +24,7 @@ async function syncNickname(member,record){
 
 // Keep Supabase's reviewer roster in sync with the configured Discord role.
 async function syncWhitelistReviewerRole(){
- const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID;
+ const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
  if(!roleId) return;
  const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
  await guild.members.fetch();
