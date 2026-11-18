@@ -95,11 +95,8 @@ module.exports = async function handler(req, res) {
     const guildMember = await guildMemberResponse.json();
     if (!discordUserResponse.ok || !discordUser.id) return send(res, 400, { error: "Discord did not return your account details." });
     if (!guildMemberResponse.ok || !Array.isArray(guildMember.roles)) return send(res, 403, { error: "Join the LCFMS Discord server before connecting your account." });
-    const reviewerRoleId = process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
-    if (!guildMember.roles.includes(reviewerRoleId)) {
-      return send(res, 403, { error: "Your Discord account does not have the authorised whitelist reviewer role." });
-    }
-
+    // Link identity once; the bot's live role roster controls review permission.
+    // This lets the Owner add or remove the reviewer role at any time in Discord.
     const { error: updateError } = await admin.from("profiles").update({ discord_user_id: discordUser.id }).eq("id", userId);
     if (updateError) {
       if (updateError.code === "23505") return send(res, 409, { error: "This Discord account is already connected to another LCFMS account. Contact the Owner." });
