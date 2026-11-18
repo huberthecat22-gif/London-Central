@@ -115,3 +115,15 @@ async function loadWhitelistApplications(){
  }));
 }
 const refreshWhitelist=$("#refresh-whitelist");if(refreshWhitelist)refreshWhitelist.addEventListener("click",loadWhitelistApplications);
+
+const linkDiscordButton=$("#link-discord-reviewer");
+if(linkDiscordButton) linkDiscordButton.addEventListener("click",async()=>{
+ const code=window.prompt("In your Discord server, run /link and enter the 8-character code it gives you:");
+ if(!code)return;
+ linkDiscordButton.disabled=true;
+ const {error}=await supabaseClient.rpc("lcfms_link_discord_account",{p_code:code.trim()});
+ linkDiscordButton.disabled=false;
+ if(error){window.alert("Discord link failed: "+error.message);return;}
+ window.alert("Discord account linked successfully. If your Discord account has the whitelist reviewer role, you can now approve and reject applications.");
+ await loadWhitelistApplications();
+});
