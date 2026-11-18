@@ -154,7 +154,7 @@ $("#login-form").addEventListener("submit", async (event) => {
     email: $("#email").value.trim(), password: $("#password").value
   });
   if (error) { message(error.message); return; }
-  await loadProfile(data.user);
+  await loadProfile(data.user, false, staffLoginMode);
 });
 document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => showPage(button.dataset.page)));
 $("#mobile-menu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
