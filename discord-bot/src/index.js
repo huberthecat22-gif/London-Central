@@ -22,6 +22,28 @@ async function syncNickname(member,record){
  if(member.manageable&&member.nickname!==nickname) await member.setNickname(nickname.slice(0,32),"LCFMS approved member number");
 }
 
+// Keep Supabase's reviewer roster in sync with the configured Discord role.
+async function syncWhitelistReviewerRole(){
+ const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID;
+ if(!roleId) return;
+ const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+ await guild.members.fetch();
+ const role=await guild.roles.fetch(roleId);
+ if(!role) throw new Error("Whitelist reviewer role not found: "+roleId);
+ const reviewers=[...role.members.values()].filter(m=>!m.user.bot).map(m=>({
+  discord_user_id:m.id,
+  role_id:roleId,
+  synced_at:new Date().toISOString()
+ }));
+ const {error:deleteError}=await db.from("discord_whitelist_reviewers").delete().eq("role_id",roleId);
+ if(deleteError) throw deleteError;
+ if(reviewers.length){
+  const {error:insertError}=await db.from("discord_whitelist_reviewers").upsert(reviewers,{onConflict:"discord_user_id"});
+  if(insertError) throw insertError;
+ }
+ console.log("Whitelist reviewer role synced:",reviewers.length,"members");
+}
+
 // Approved website applications are the only trigger for allocating a new number.
 async function processApprovedApplications(){
  const {data:applications,error}=await db.from("whitelist_applications")
@@ -73,7 +95,9 @@ client.once(Events.ClientReady,async ready=>{
   }catch(error){console.error("Existing member sync failed",member.id,error.message);}
  }
  await processApprovedApplications();
+ await syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message));
  setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
+ setInterval(()=>syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message)),60000);
 });
 
 client.on(Events.GuildMemberAdd,member=>{
