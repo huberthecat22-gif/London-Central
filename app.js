@@ -4,6 +4,7 @@ const configured = typeof cfg.SUPABASE_URL === "string" && cfg.SUPABASE_URL.star
   typeof cfg.SUPABASE_ANON_KEY === "string" && cfg.SUPABASE_ANON_KEY.length > 10;
 let supabaseClient = null;
 let currentUser = null;
+let currentProfileRole = null;
 if (configured && window.supabase) supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 function message(text) { $("#login-message").textContent = text || ""; }
@@ -40,6 +41,7 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
 });
 function showPortal(profile) {
+  document.querySelectorAll(".owner-only").forEach(el => el.classList.toggle("hidden", profile.role !== "owner"));
   $("#public-home").classList.add("hidden");
   $("#public-whitelist").classList.add("hidden");
   $("#login").classList.add("hidden");
@@ -67,7 +69,9 @@ async function loadProfile(user) {
     message("Your account is awaiting approval or is not authorised. Contact LCFMS management.");
     return;
   }
+  currentProfileRole = data.role;
   showPortal(data);
+  if (data.role === "owner") loadMemberNumbers();
 }
 $("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault(); message("");
@@ -120,6 +124,32 @@ async function loadWhitelistApplications(){
  }));
 }
 const refreshWhitelist=$("#refresh-whitelist");if(refreshWhitelist)refreshWhitelist.addEventListener("click",loadWhitelistApplications);
+
+async function loadMemberNumbers(){
+ const host=$("#member-number-list");
+ if(!host||!supabaseClient||currentProfileRole!=="owner")return;
+ host.textContent="Loading member records…";
+ const {data,error}=await supabaseClient.from("discord_members")
+  .select("discord_user_id,discord_username,discord_display_name,member_number")
+  .order("member_number",{ascending:true});
+ if(error){host.textContent="Could not load member records: "+error.message;return;}
+ if(!data?.length){host.textContent="No member numbers have been assigned yet.";return;}
+ host.innerHTML='<div class="member-number-table">'+data.map(m=>'<div class="member-number-row"><div><b>'+esc(m.discord_display_name||m.discord_username||"Discord member")+'</b><small>'+esc(m.discord_username||"")+' · '+esc(m.discord_user_id)+'</small></div><label>Member number<input class="member-number-input" data-member-id="'+esc(m.discord_user_id)+'" maxlength="12" value="'+esc(m.member_number)+'" autocomplete="off" pattern="[A-Za-z0-9]{1,12}"></label><button class="primary" data-save-member-number="'+esc(m.discord_user_id)+'" type="button">Save</button></div>').join("")+'</div>';
+ host.querySelectorAll("[data-save-member-number]").forEach(button=>button.addEventListener("click",async()=>{
+  const id=button.dataset.saveMemberNumber;
+  const input=host.querySelector('.member-number-input[data-member-id="'+CSS.escape(id)+'"]');
+  const value=(input?.value||"").trim().toUpperCase();
+  if(!/^[A-Z0-9]{1,12}$/.test(value)){window.alert("Use 1 to 12 letters or numbers, with no spaces or symbols.");return;}
+  button.disabled=true;button.textContent="Saving…";
+  const {error:saveError}=await supabaseClient.rpc("lcfms_owner_set_member_number",{p_discord_user_id:id,p_new_member_number:value});
+  if(saveError){window.alert("Could not change member number: "+saveError.message);button.disabled=false;button.textContent="Save";return;}
+  button.textContent="Saved";
+  await loadMemberNumbers();
+ }));
+}
+const refreshMemberNumbers=$("#refresh-member-numbers");
+if(refreshMemberNumbers)refreshMemberNumbers.addEventListener("click",loadMemberNumbers);
+
 
 const linkDiscordButton=$("#link-discord-reviewer");
 async function startDiscordReviewerLink(){
