@@ -25,15 +25,21 @@ async function syncNickname(member,record){
 // Keep Supabase's reviewer roster in sync with the configured Discord role.
 async function syncWhitelistReviewerRole(){
  const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
+ const guildId=process.env.DISCORD_GUILD_ID;
  if(!roleId) return;
- const guild=client.guilds.cache.get(process.env.DISCORD_GUILD_ID) || await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
- const role=await guild.roles.fetch(roleId);
- if(!role) throw new Error("Whitelist reviewer role not found: "+roleId);
- const reviewers=[...role.members.values()].filter(m=>!m.user.bot).map(m=>({
-  discord_user_id:m.id,
-  role_id:roleId,
-  synced_at:new Date().toISOString()
- }));
+ const reviewers=[];
+ let after="0";
+ while(true){
+  const page=await client.rest.get(Routes.guildMembers(guildId),{query:{limit:1000,after}});
+  if(!Array.isArray(page)||page.length===0) break;
+  for(const member of page){
+   if(member.user&&!member.user.bot&&Array.isArray(member.roles)&&member.roles.includes(roleId)){
+    reviewers.push({discord_user_id:member.user.id,role_id:roleId,synced_at:new Date().toISOString()});
+   }
+  }
+  after=page[page.length-1].user.id;
+  if(page.length<1000) break;
+ }
  const {error:deleteError}=await db.from("discord_whitelist_reviewers").delete().eq("role_id",roleId);
  if(deleteError) throw deleteError;
  if(reviewers.length){
@@ -84,7 +90,6 @@ client.once(Events.ClientReady,async ready=>{
  const rest=new REST({version:"10"}).setToken(process.env.DISCORD_BOT_TOKEN);
  await rest.put(Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID,process.env.DISCORD_GUILD_ID),{body:commands});
  const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
- await guild.members.fetch();
  // Existing records are only synced; no number is created just because someone joined.
  for(const member of guild.members.cache.values()){
   if(member.user.bot) continue;
