@@ -122,9 +122,18 @@ async function handleTrainingButton(interaction){
  const {data:notice,error:noticeError}=await db.from("training_notices")
   .select("id,module_name,maximum_trainees").eq("id",noticeId).maybeSingle();
  if(noticeError||!notice)return interaction.reply({content:"This training notice is no longer available.",ephemeral:true}),true;
+ // Check the synced member record first, then the authoritative approved whitelist application.
  const {data:member,error:memberError}=await db.from("discord_members")
   .select("whitelist_status").eq("discord_user_id",interaction.user.id).maybeSingle();
- if(memberError||member?.whitelist_status!=="approved")
+ if(memberError) throw memberError;
+ let isApproved=member?.whitelist_status==="approved";
+ if(!isApproved){
+  const {data:application,error:applicationError}=await db.from("whitelist_applications")
+   .select("id").eq("discord_user_id",interaction.user.id).eq("status","approved").limit(1).maybeSingle();
+  if(applicationError) throw applicationError;
+  isApproved=!!application;
+ }
+ if(!isApproved)
   return interaction.reply({content:"Only approved LCFMS members can register for training.",ephemeral:true}),true;
  if(action==="training_withdraw"){
   const {error}=await db.from("training_notice_signups").delete()
