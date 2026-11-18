@@ -80,6 +80,7 @@ function showPortal(profile, canReviewWhitelist) {
   $("#rank-pill").textContent = profile.rank_name || (isPlayer ? "Whitelisted Member" : "Approved staff");
   $("#today").textContent = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(new Date());
   setupTrainingNoticeAccess();
+  document.querySelectorAll(".fms-add").forEach(el=>el.classList.toggle("hidden",!fmsCanManage()));
   showPage("dashboard");
   if (canReviewWhitelist) loadWhitelistApplications();
 }
@@ -243,7 +244,7 @@ function signedInDiscordId(){
   ""
  );
 }
-function canCreateTrainingNotice(){return TRAINING_NOTICE_CREATORS.includes(signedInDiscordId());}
+function canCreateTrainingNotice(){return TRAINING_NOTICE_CREATORS.includes(signedInDiscordId()) || ["owner","senior_management","management","staff"].includes(currentProfileRole);}
 function setupTrainingNoticeAccess(){
  const button=$("#create-training-notice");
  if(button)button.classList.toggle("hidden",!canCreateTrainingNotice());
@@ -379,6 +380,9 @@ async function handleDiscordOAuthCallback(session){
 
 /* LCFMS operational records workbench. Data is stored in Supabase and protected by RLS. */
 const FMS_MODULES={
+ cad:{title:"CAD incident",fields:[["title","Incident summary"],["reference","Incident / call reference"],["status","Status","New|Assigned|En route|On scene|Resolved|Closed"],["details","Location, caller details, priority, units and actions"]]},
+ mdt:{title:"MDT log",fields:[["title","Officer / unit / activity"],["reference","Callsign / incident reference"],["status","Unit status","Available|En route|On scene|Busy|Off duty"],["details","Operational update and notes"]]},
+ pnc:{title:"PNC record",fields:[["title","Person / vehicle / record subject"],["reference","Record reference / registration"],["status","Record status","Information|Wanted|Warning|Located|Archived"],["details","Record details, grounds and review notes"]]},
  custody:{title:"Custody record",fields:[["title","Detainee / subject"],["reference","Custody reference"],["status","Status","Booked in|In custody|Released|Transferred"],["details","Booking notes, grounds and outcome"]]},
  hr:{title:"Personnel record",fields:[["title","Member / subject"],["reference","Record reference"],["status","Status","Open|Under review|Approved|Rejected|Closed"],["details","Details and management decision"]]},
  fleet:{title:"Fleet record",fields:[["title","Vehicle / callsign"],["reference","Registration / fleet ID"],["status","Status","Available|Assigned|Under repair|Out of service"],["details","Allocation, defects or maintenance notes"]]},
@@ -434,4 +438,4 @@ document.querySelectorAll(".fms-search").forEach(input=>input.addEventListener("
 document.querySelectorAll(".fms-filter").forEach(input=>input.addEventListener("change",()=>renderFmsRecords(input.dataset.filter)));
 const fmsOriginalShowPage=showPage;
 showPage=function(page){fmsOriginalShowPage(page);if(FMS_MODULES[page])loadFmsRecords(page);};
-document.querySelectorAll(".fms-add").forEach(btn=>btn.classList.toggle("hidden",!fmsCanManage()));
+
