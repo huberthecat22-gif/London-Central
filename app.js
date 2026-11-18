@@ -13,7 +13,8 @@ function showPublicView(view) {
   ["public-home","public-whitelist","login"].forEach(id => $("#"+id).classList.toggle("hidden", id !== view));
 }
 $("#open-whitelist").addEventListener("click",()=>showPublicView("public-whitelist"));
-$("#open-staff-login").addEventListener("click",()=>{showPublicView("login");message("");});
+$("#open-signup").addEventListener("click",()=>{showPublicView("login");message("");$("#login").querySelector("h1").textContent="Create your LCFMS account";$("#login").querySelector("p").textContent="Only Discord accounts with an approved whitelist application can create a member account.";$("#discord-login").textContent="Sign Up with Discord";});
+$("#open-signin").addEventListener("click",()=>{showPublicView("login");message("");$("#login").querySelector("h1").textContent="LCFMS sign in";$("#login").querySelector("p").textContent="Sign in with the Discord account used on your approved whitelist application. Staff can use their staff login.";$("#discord-login").textContent="Continue with Discord";});
 $("#back-login-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#public-whitelist-form").addEventListener("submit",async event=>{
