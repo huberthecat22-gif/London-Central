@@ -42,24 +42,28 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   status.textContent="Your whitelist request has been submitted. Staff will review it manually.";
 });
 function showPortal(profile, canReviewWhitelist) {
+  const isPlayer = profile.role === "player";
+  document.querySelectorAll(".player-hidden").forEach(el => el.classList.toggle("hidden", isPlayer));
   document.querySelectorAll(".owner-only").forEach(el => el.classList.toggle("hidden", profile.role !== "owner"));
   document.querySelectorAll(".reviewer-only").forEach(el => el.classList.toggle("hidden", !canReviewWhitelist));
   $("#page-member-numbers").classList.toggle("hidden", profile.role !== "owner");
+  $("#page-staff").classList.toggle("hidden", isPlayer);
   $("#page-whitelist").classList.toggle("hidden", !canReviewWhitelist);
   $("#public-home").classList.add("hidden");
   $("#public-whitelist").classList.add("hidden");
   $("#login").classList.add("hidden");
   $("#portal").classList.remove("hidden");
-  $("#hello").textContent = `Welcome, ${profile.display_name || "LCFMS staff"}`;
-  $("#user-name").textContent = profile.display_name || "Staff member";
-  $("#rank-pill").textContent = profile.rank_name || "Approved staff";
+  $("#hello").textContent = `Welcome, ${profile.display_name || (isPlayer ? "LCFMS member" : "LCFMS staff")}`;
+  $("#user-name").textContent = profile.display_name || (isPlayer ? "Whitelisted member" : "Staff member");
+  $("#rank-pill").textContent = profile.rank_name || (isPlayer ? "Whitelisted Member" : "Approved staff");
   $("#today").textContent = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(new Date());
   showPage("dashboard");
-  loadWhitelistApplications();
+  if (canReviewWhitelist) loadWhitelistApplications();
 }
 function showPage(page) {
   if (page === "whitelist" && !currentCanReviewWhitelist) page = "dashboard";
   if (page === "member-numbers" && currentProfileRole !== "owner") page = "dashboard";
+  if (page === "staff" && currentProfileRole === "player") page = "dashboard";
   document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${page}`));
   document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("active", el.dataset.page === page && el.classList.contains("nav-link")));
   const active = document.querySelector(`.nav-link[data-page="${page}"]`);
@@ -74,7 +78,7 @@ async function loadProfile(user) {
     const { error: syncError } = await supabaseClient.rpc("lcfms_sync_discord_member_profile");
     if (syncError) {
       await supabaseClient.auth.signOut();
-      message("Your Discord account is not linked to an approved whitelist member. Contact LCFMS management.");
+      message("Your Discord account does not have an approved whitelist application. Please contact LCFMS management if you believe this is wrong.");
       return;
     }
   }
