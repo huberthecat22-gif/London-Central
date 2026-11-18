@@ -79,6 +79,7 @@ function showPortal(profile, canReviewWhitelist) {
   $("#user-name").textContent = profile.display_name || (isPlayer ? "Whitelisted member" : "Staff member");
   $("#rank-pill").textContent = profile.rank_name || (isPlayer ? "Whitelisted Member" : "Approved staff");
   $("#today").textContent = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(new Date());
+  setupTrainingNoticeAccess();
   showPage("dashboard");
   if (canReviewWhitelist) loadWhitelistApplications();
 }
@@ -91,6 +92,7 @@ function showPage(page) {
   const active = document.querySelector(`.nav-link[data-page="${page}"]`);
   $("#crumb").textContent = active ? active.textContent.trim() : page;
   $("#sidebar").classList.remove("open");
+  if(page==="training"){setupTrainingNoticeAccess();loadTrainingNotices();}
 }
 async function loadProfile(user, openPortal = false, staffOnly = false) {
   currentUser = user;
@@ -225,6 +227,79 @@ async function loadMemberNumbers(){
 }
 const refreshMemberNumbers=$("#refresh-member-numbers");
 if(refreshMemberNumbers)refreshMemberNumbers.addEventListener("click",loadMemberNumbers);
+
+const TRAINING_NOTICE_CREATORS = ["1562514652297035787","1562514998146764810","1562514757259632821"];
+function signedInDiscordId(){
+ const u=currentUser||{};
+ return String(u.app_metadata?.provider_id||u.user_metadata?.provider_id||u.user_metadata?.sub||"");
+}
+function canCreateTrainingNotice(){return TRAINING_NOTICE_CREATORS.includes(signedInDiscordId());}
+function setupTrainingNoticeAccess(){
+ const button=$("#create-training-notice");
+ if(button)button.classList.toggle("hidden",!canCreateTrainingNotice());
+}
+async function loadTrainingNotices(){
+ const host=$("#training-list");if(!host||!supabaseClient)return;
+ host.textContent="Loading training notices…";
+ const {data,error}=await supabaseClient.from("training_notices").select("id,module_name,training_date,training_time,prerequisites,maximum_trainees,trainers,observers,observers_na,location,created_at").order("training_date",{ascending:true}).order("training_time",{ascending:true});
+ if(error){host.textContent="Could not load training notices: "+error.message;return;}
+ if(!data?.length){host.textContent="No training notices have been published yet.";return;}
+ host.classList.remove("empty-state");
+ host.innerHTML=data.map(n=>'<article class="training-notice-card"><div class="training-notice-title"><span>TRAINING NOTICE</span><h3>'+esc(n.module_name)+'</h3></div><div class="training-notice-details">'+[
+ ["Date",n.training_date?new Date(n.training_date+"T00:00:00").toLocaleDateString("en-GB"):"—"],
+ ["Time",n.training_time||"—"],
+ ["Prerequisites",n.prerequisites||"None stated"],
+ ["Maximum trainees",n.maximum_trainees],
+ ["Trainer(s)",n.trainers],
+ ["Observer(s)",n.observers_na?"N/A":(n.observers||"Not specified")],
+ ["Location for training",n.location||"Waiting Room"]
+ ].map(([k,v])=>'<div class="training-detail"><b>'+esc(k)+':</b><span>'+esc(v)+'</span></div>').join("")+'</div>'+(canCreateTrainingNotice()?'<div class="training-notice-footer"><button class="review-reject" type="button" data-delete-training="'+esc(n.id)+'">Delete notice</button></div>':"")+'</article>').join("");
+ host.querySelectorAll("[data-delete-training]").forEach(btn=>btn.addEventListener("click",async()=>{
+  if(!canCreateTrainingNotice()||!window.confirm("Delete this training notice?"))return;
+  btn.disabled=true;
+  const {error:delError}=await supabaseClient.from("training_notices").delete().eq("id",btn.dataset.deleteTraining);
+  if(delError){window.alert("Could not delete notice: "+delError.message);btn.disabled=false;return;}
+  await loadTrainingNotices();
+ }));
+}
+const createTrainingButton=$("#create-training-notice");
+if(createTrainingButton)createTrainingButton.addEventListener("click",()=>{
+ if(!canCreateTrainingNotice())return;
+ $("#training-notice-form").classList.toggle("hidden");
+});
+const cancelTrainingButton=$("#cancel-training-notice");
+if(cancelTrainingButton)cancelTrainingButton.addEventListener("click",()=>{$("#training-notice-form").classList.add("hidden");$("#training-notice-form").reset();$("#training-notice-form").elements.location.value="Waiting Room";});
+const trainingForm=$("#training-notice-form");
+if(trainingForm)trainingForm.addEventListener("submit",async event=>{
+ event.preventDefault();
+ const status=$("#training-form-message");
+ if(!canCreateTrainingNotice()){status.textContent="You are not authorised to publish training notices.";return;}
+ if(!supabaseClient){status.textContent="Database connection is unavailable.";return;}
+ const form=new FormData(trainingForm);
+ const observersNA=form.get("observers_na")==="on";
+ const payload={
+  module_name:String(form.get("module")||"").trim(),
+  training_date:String(form.get("date")||""),
+  training_time:String(form.get("time")||""),
+  prerequisites:String(form.get("prerequisites")||"").trim()||"None",
+  maximum_trainees:Number(form.get("maximum")),
+  trainers:String(form.get("trainers")||"").trim(),
+  observers:String(form.get("observers")||"").trim(),
+  observers_na:observersNA,
+  location:String(form.get("location")||"Waiting Room").trim()||"Waiting Room",
+  created_by:currentUser.id
+ };
+ if(observersNA)payload.observers="";
+ const submit=trainingForm.querySelector('button[type="submit"]');
+ submit.disabled=true;submit.textContent="Publishing…";status.textContent="";
+ const {error}=await supabaseClient.from("training_notices").insert(payload);
+ submit.disabled=false;submit.textContent="Publish training notice";
+ if(error){status.textContent="Could not publish notice: "+error.message;return;}
+ trainingForm.reset();trainingForm.elements.location.value="Waiting Room";trainingForm.classList.add("hidden");
+ await loadTrainingNotices();
+});
+const refreshTraining=$("#refresh-training");
+if(refreshTraining)refreshTraining.addEventListener("click",loadTrainingNotices);
 
 
 const linkDiscordButton=$("#link-discord-reviewer");
