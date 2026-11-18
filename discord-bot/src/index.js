@@ -11,17 +11,51 @@ const commands=[
  new SlashCommandBuilder().setName("member").setDescription("Check your LCFMS member number")
 ].map(c=>c.toJSON());
 
-// Read-only lookup: joining Discord must never allocate a number.
 async function getMemberRecord(discordUserId){
  const {data,error}=await db.from("discord_members").select("*").eq("discord_user_id",discordUserId).maybeSingle();
  if(error) throw error;
  return data;
 }
-
 async function syncNickname(member,record){
  if(!record||!record.member_number)return;
  const nickname=record.custom_nickname||`[${String(record.member_number).padStart(4,"0")}] ${record.custom_prefix?record.custom_prefix+" ":""}${record.discord_display_name||record.discord_username}${record.custom_suffix?" "+record.custom_suffix:""}`;
  if(member.manageable&&member.nickname!==nickname) await member.setNickname(nickname.slice(0,32),"LCFMS approved member number");
+}
+
+// Approved website applications are the only trigger for allocating a new number.
+async function processApprovedApplications(){
+ const {data:applications,error}=await db.from("whitelist_applications")
+  .select("id,discord_user_id,roblox_username,status")
+  .eq("status","approved").not("discord_user_id","is",null).limit(100);
+ if(error) throw error;
+ const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+ for(const application of applications||[]){
+  try{
+   const member=await guild.members.fetch(application.discord_user_id).catch(()=>null);
+   if(!member||member.user.bot) continue;
+   let record=await getMemberRecord(member.id);
+   if(!record){
+    const {error:allocationError}=await db.rpc("lcfms_allocate_member_number",{
+     p_discord_user_id:member.id,
+     p_username:member.user.username,
+     p_display_name:member.displayName||member.user.username
+    });
+    if(allocationError) throw allocationError;
+    record=await getMemberRecord(member.id);
+   }
+   const {error:updateError}=await db.from("discord_members").update({
+    whitelist_status:"approved",
+    roblox_username:application.roblox_username,
+    updated_at:new Date().toISOString()
+   }).eq("discord_user_id",member.id);
+   if(updateError) throw updateError;
+   await syncNickname(member,record);
+   if(process.env.DISCORD_WHITELIST_ROLE_ID){
+    const role=await guild.roles.fetch(process.env.DISCORD_WHITELIST_ROLE_ID);
+    if(role&&!member.roles.cache.has(role.id)) await member.roles.add(role,"LCFMS website whitelist approved");
+   }
+  }catch(error){console.error("Approved whitelist sync failed",application.id,application.discord_user_id,error.message);}
+ }
 }
 
 client.once(Events.ClientReady,async ready=>{
@@ -30,16 +64,18 @@ client.once(Events.ClientReady,async ready=>{
  await rest.put(Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID,process.env.DISCORD_GUILD_ID),{body:commands});
  const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
  await guild.members.fetch();
+ // Existing records are only synced; no number is created just because someone joined.
  for(const member of guild.members.cache.values()){
   if(member.user.bot) continue;
   try{
    const record=await getMemberRecord(member.id);
-   if(record) await syncNickname(member,record);
+   if(record&&record.member_number) await syncNickname(member,record);
   }catch(error){console.error("Existing member sync failed",member.id,error.message);}
  }
+ await processApprovedApplications();
+ setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
 });
 
-// New Discord members do not receive a number until their website application is approved.
 client.on(Events.GuildMemberAdd,member=>{
  if(member.guild.id!==process.env.DISCORD_GUILD_ID||member.user.bot)return;
  console.log("New member joined; no number assigned until website whitelist approval:",member.id);
