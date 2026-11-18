@@ -159,3 +159,9 @@ body{background:#080d14;color:var(--text)}
 .primary{background:linear-gradient(135deg,#2e8bc5,#1b6598);border:1px solid #55a4d6;box-shadow:0 5px 15px #12669b33}.primary:hover{filter:brightness(1.1)}.secondary{background:#142536;color:#d9e9f6;border:1px solid #35536b;border-radius:7px;padding:12px;font-weight:700}
 .member-number-row,.whitelist-card{background:#101e2b;border:1px solid #2a4053;border-radius:8px}
 @media(max-width:800px){.topbar{padding:0 16px}.page-wrap{padding:24px 16px}.page-heading h1{font-size:25px}.stat-grid{grid-template-columns:1fr 1fr}.content-grid{grid-template-columns:1fr}}
+
+
+/* Alignment refinement: keep the portal content visually centred in the space beside the sidebar. */
+.main-area{min-width:0}
+.page-wrap{width:100%;max-width:1400px;margin-left:auto;margin-right:auto;padding-left:38px;padding-right:38px}
+@media(max-width:850px){.page-wrap{max-width:none;padding-left:18px;padding-right:18px}}
