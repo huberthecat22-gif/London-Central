@@ -122,7 +122,6 @@ async function loadWhitelistApplications(){
 const refreshWhitelist=$("#refresh-whitelist");if(refreshWhitelist)refreshWhitelist.addEventListener("click",loadWhitelistApplications);
 
 const linkDiscordButton=$("#link-discord-reviewer");
-const DISCORD_REVIEW_ROLE_ID="1572689837176131696";
 async function startDiscordReviewerLink(){
  if(!supabaseClient||!currentUser){window.alert("Please sign in to LCFMS first.");return;}
  const {data}=await supabaseClient.auth.getSession();
@@ -161,9 +160,7 @@ async function handleDiscordOAuthCallback(session){
   window.alert("Discord connection was cancelled or denied.");
   return;
  }
- const expectedState=sessionStorage.getItem("lcfms_discord_oauth_state");
- sessionStorage.removeItem("lcfms_discord_oauth_state");
- if(!expectedState||!returnedState||expectedState!==returnedState){
+ if(!returnedState){
   window.history.replaceState({},document.title,cleanUrl);
   window.alert("Discord connection could not be verified. Please try again.");
   return;
