@@ -201,6 +201,9 @@ client.once(Events.ClientReady,async ready=>{
  await syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message));
  setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
  setInterval(()=>processPendingNicknameUpdates().catch(error=>console.error("Pending nickname sync failed",error.message)),10000);
+ // Publish website-created training notices to the configured Discord channel.
+ await publishPendingTrainingNotices().catch(error=>console.error("Initial training notice publish failed:",error.message));
+ setInterval(()=>publishPendingTrainingNotices().catch(error=>console.error("Training notice publish failed:",error.message)),10000);
  setInterval(()=>syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message)),60000);
 });
 
