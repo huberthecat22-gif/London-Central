@@ -34,7 +34,7 @@ $("#public-whitelist-form").addEventListener("submit",async event=>{
   submit.disabled=false;submit.textContent="Submit Whitelist";
   if(error){status.textContent="We couldn't submit your request: "+error.message;return;}
   if(data==="already_submitted"){
-    status.textContent="An application for this Roblox username is already pending or approved. You cannot submit another one.";
+    status.textContent="An application for this Roblox username is already pending. Please wait for staff to review it.";
     return;
   }
   $("#public-whitelist-form").reset();
