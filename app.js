@@ -24,12 +24,30 @@ function renderAccessOptions(state){
   $("#access-message").textContent=state==="whitelist"?"Your Discord account is not yet fully whitelisted. Submit your application here.":state==="member"?"Your whitelist is approved. Sign in to access the FMS.":state==="staff"||state==="owner"?"Your whitelist is approved and your Discord ID is authorised for staff access.":"Verify with the Discord account you use in the London Central server.";
 }
 async function beginDiscordVerification(){
-  if(!supabaseClient){$("#access-message").textContent="Database connection is not configured.";return;}
-  const button=$("#verify-discord");button.disabled=true;button.textContent="Connecting to Discord…";
-  const {error}=await supabaseClient.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+"/"}});
-  if(error){$("#access-message").textContent="Discord verification failed: "+error.message;button.disabled=false;button.textContent="Verify with Discord";}
+  const button=$("#verify-discord"), status=$("#access-message");
+  try {
+    if(!supabaseClient){status.textContent="Connection unavailable: Supabase configuration or library is missing. Please contact LCFMS management.";return;}
+    button.disabled=true;button.textContent="Connecting to Discord…";
+    status.textContent="Opening Discord authorisation…";
+    const {data,error}=await supabaseClient.auth.signInWithOAuth({
+      provider:"discord",
+      options:{redirectTo:window.location.origin+window.location.pathname,skipBrowserRedirect:false}
+    });
+    if(error) throw error;
+    if(data?.url) window.location.assign(data.url);
+    else {status.textContent="Discord sign-in could not start. Check the Discord provider settings in Supabase.";button.disabled=false;button.textContent="Verify with Discord";}
+  } catch(error) {
+    console.error("LCFMS Discord verification error:",error);
+    status.textContent="Discord verification could not start: "+(error?.message||"Unknown error")+". Please try again or contact management.";
+    button.disabled=false;button.textContent="Verify with Discord";
+  }
 }
-$("#verify-discord").addEventListener("click",beginDiscordVerification);
+window.beginDiscordVerification=beginDiscordVerification;
+const verifyButton=$("#verify-discord");
+if(verifyButton){
+ verifyButton.addEventListener("click",beginDiscordVerification);
+ verifyButton.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();beginDiscordVerification();}});
+}
 $("#open-signup").addEventListener("click",()=>{staffLoginMode=true;showPublicView("login");$("#discord-login").classList.add("hidden");$("#staff-email-login").open=true;message("");});
 $("#open-signin").addEventListener("click",()=>{staffLoginMode=false;showPublicView("login");$("#discord-login").classList.remove("hidden");$("#staff-email-login").open=false;message("");});
 $("#back-login-home").addEventListener("click",()=>{staffLoginMode=false;$("#discord-login").classList.remove("hidden");showPublicView("public-home");});
