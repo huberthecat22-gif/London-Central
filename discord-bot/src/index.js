@@ -30,7 +30,9 @@ async function syncWhitelistReviewerRole(){
  const reviewers=[];
  let after="0";
  while(true){
-  const page=await client.rest.get(Routes.guildMembers(guildId),{query:{limit:1000,after}});
+  const response=await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`,{headers:{Authorization:`Bot ${process.env.DISCORD_BOT_TOKEN}`}});
+  if(!response.ok) throw new Error(`Discord member-list HTTP ${response.status}: ${await response.text()}`);
+  const page=await response.json();
   if(!Array.isArray(page)||page.length===0) break;
   for(const member of page){
    if(member.user&&!member.user.bot&&Array.isArray(member.roles)&&member.roles.includes(roleId)){
