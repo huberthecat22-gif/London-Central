@@ -72,7 +72,7 @@ async function syncWhitelistReviewerRole(){
 
 
 const TRAINING_CHANNEL_ID=process.env.DISCORD_TRAINING_CHANNEL_ID||"1562246158472978462";
-function trainingEmbed(notice){
+function trainingEmbed(notice,playerCount=0){
  const date=notice.training_date?new Date(notice.training_date+"T00:00:00").toLocaleDateString("en-GB"):"Not set";
  const time=String(notice.training_time||"").slice(0,5)||"Not set";
  return new EmbedBuilder()
@@ -84,6 +84,7 @@ function trainingEmbed(notice){
    {name:"Date:",value:date,inline:true},
    {name:"Time:",value:time,inline:true},
    {name:"Prerequisites:",value:notice.prerequisites||"None",inline:false},
+   {name:"Players:",value:`${playerCount} / ${notice.maximum_trainees??"—"}`,inline:true},
    {name:"Maximum trainees:",value:String(notice.maximum_trainees??"—"),inline:true},
    {name:"Trainer(s):",value:notice.trainers||"—",inline:false},
    {name:"Observer(s):",value:notice.observers_na?"N/A":(notice.observers||"—"),inline:false},
@@ -97,6 +98,24 @@ function trainingButtons(id){
   new ButtonBuilder().setCustomId("training_withdraw:"+id).setLabel("Withdraw").setStyle(ButtonStyle.Primary)
  );
 }
+async function getTrainingPlayerCount(noticeId){
+ const {count,error}=await db.from("training_notice_signups").select("id",{count:"exact",head:true}).eq("training_notice_id",noticeId);
+ if(error)throw error;
+ return count||0;
+}
+async function refreshTrainingNoticeMessage(noticeId){
+ const {data:notice,error}=await db.from("training_notices")
+  .select("id,module_name,training_date,training_time,prerequisites,maximum_trainees,trainers,observers,observers_na,location,discord_message_id,discord_channel_id")
+  .eq("id",noticeId).maybeSingle();
+ if(error)throw error;
+ if(!notice?.discord_message_id||!notice.discord_channel_id)return;
+ const count=await getTrainingPlayerCount(noticeId);
+ const channel=await client.channels.fetch(notice.discord_channel_id);
+ if(!channel||!channel.isTextBased())throw new Error("Training notice channel is unavailable.");
+ const message=await channel.messages.fetch(notice.discord_message_id);
+ await message.edit({embeds:[trainingEmbed(notice,count)],components:[trainingButtons(noticeId)]});
+ console.log("Training player counter updated:",noticeId,count);
+}
 async function publishPendingTrainingNotices(){
  const {data:notices,error}=await db.from("training_notices")
   .select("id,module_name,training_date,training_time,prerequisites,maximum_trainees,trainers,observers,observers_na,location")
@@ -107,7 +126,8 @@ async function publishPendingTrainingNotices(){
  if(!channel||!channel.isTextBased())throw new Error("Training notices channel is unavailable or not a text channel.");
  for(const notice of notices){
   try{
-   const message=await channel.send({embeds:[trainingEmbed(notice)],components:[trainingButtons(notice.id)]});
+   const playerCount=await getTrainingPlayerCount(notice.id);
+   const message=await channel.send({embeds:[trainingEmbed(notice,playerCount)],components:[trainingButtons(notice.id)]});
    const {error:updateError}=await db.from("training_notices").update({
     discord_message_id:message.id,discord_channel_id:channel.id
    }).eq("id",notice.id).is("discord_message_id",null);
@@ -139,6 +159,7 @@ async function handleTrainingButton(interaction){
   const {error}=await db.from("training_notice_signups").delete()
    .eq("training_notice_id",noticeId).eq("discord_user_id",interaction.user.id);
   if(error)return interaction.reply({content:"Your withdrawal could not be processed. Please try again.",ephemeral:true}),true;
+  await refreshTrainingNoticeMessage(noticeId);
   return interaction.reply({content:"You have withdrawn from **"+notice.module_name+"**.",ephemeral:true}),true;
  }
  const {data:signupResult,error:signupError}=await db.rpc("lcfms_training_signup",{
