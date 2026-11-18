@@ -123,21 +123,31 @@ const refreshWhitelist=$("#refresh-whitelist");if(refreshWhitelist)refreshWhitel
 
 const linkDiscordButton=$("#link-discord-reviewer");
 const DISCORD_REVIEW_ROLE_ID="1572689837176131696";
-function startDiscordReviewerLink(){
+async function startDiscordReviewerLink(){
  if(!supabaseClient||!currentUser){window.alert("Please sign in to LCFMS first.");return;}
- const clientId=window.LCFMS_CONFIG?.DISCORD_CLIENT_ID;
- if(!clientId){window.alert("Discord connection is not configured yet. Please contact the LCFMS owner.");return;}
- const state=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,"0")).join("");
- sessionStorage.setItem("lcfms_discord_oauth_state",state);
- const redirectUri=window.location.origin+"/";
- const params=new URLSearchParams({
-  client_id:clientId,
-  redirect_uri:redirectUri,
-  response_type:"code",
-  scope:"identify guilds.members.read",
-  state
- });
- window.location.href="https://discord.com/oauth2/authorize?"+params.toString();
+ const {data}=await supabaseClient.auth.getSession();
+ if(!data.session){window.alert("Your LCFMS session has expired. Please sign in again.");return;}
+ if(linkDiscordButton){linkDiscordButton.disabled=true;linkDiscordButton.textContent="Opening Discord…";}
+ try{
+  const response=await fetch("/api/discord/link",{
+   method:"POST",
+   headers:{"Content-Type":"application/json","Authorization":"Bearer "+data.session.access_token},
+   body:JSON.stringify({action:"state"})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.state||!result.client_id||!result.redirect_uri)throw new Error(result.error||"Discord connection is not configured yet.");
+  const params=new URLSearchParams({
+   client_id:result.client_id,
+   redirect_uri:result.redirect_uri,
+   response_type:"code",
+   scope:"identify guilds.members.read",
+   state:result.state
+  });
+  window.location.href="https://discord.com/oauth2/authorize?"+params.toString();
+ }catch(error){
+  window.alert(error.message);
+  if(linkDiscordButton){linkDiscordButton.disabled=false;linkDiscordButton.textContent="Connect Discord";}
+ }
 }
 if(linkDiscordButton) linkDiscordButton.addEventListener("click",startDiscordReviewerLink);
 
@@ -165,7 +175,7 @@ async function handleDiscordOAuthCallback(session){
   const response=await fetch("/api/discord/link",{
    method:"POST",
    headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
-   body:JSON.stringify({code,redirect_uri:window.location.origin+"/"})
+   body:JSON.stringify({action:"link",code,state:returnedState})
   });
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||"Discord connection failed.");
