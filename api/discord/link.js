@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 function send(res, status, body) {
-  return res.status(status).setHeader("Content-Type", "application/json").json(body);
+  res.status(status);\n  res.setHeader("Content-Type", "application/json");\n  return res.json(body);
 }
 
 function getBearer(req) {
