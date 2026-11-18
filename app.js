@@ -7,6 +7,7 @@ let currentUser = null;
 let currentProfileRole = null;
 let currentCanReviewWhitelist = false;
 let currentAccessState = "unknown";
+let staffLoginMode = false;
 if (configured && window.supabase) supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 function message(text) { $("#login-message").textContent = text || ""; }
@@ -19,7 +20,7 @@ function renderAccessOptions(state){
   $("#verify-discord").classList.toggle("hidden",state!=="unknown");
   $("#open-whitelist").classList.toggle("hidden",state!=="whitelist");
   $("#open-signin").classList.toggle("hidden",!["member","staff","owner"].includes(state));
-  $("#open-signup").classList.toggle("hidden",!["staff","owner"].includes(state));
+  $("#open-signup").classList.remove("hidden");
   $("#access-message").textContent=state==="whitelist"?"Your Discord account is not yet fully whitelisted. Submit your application here.":state==="member"?"Your whitelist is approved. Sign in to access the FMS.":state==="staff"||state==="owner"?"Your whitelist is approved and your Discord ID is authorised for staff access.":"Verify with the Discord account you use in the London Central server.";
 }
 async function beginDiscordVerification(){
@@ -29,9 +30,9 @@ async function beginDiscordVerification(){
   if(error){$("#access-message").textContent="Discord verification failed: "+error.message;button.disabled=false;button.textContent="Verify with Discord";}
 }
 $("#verify-discord").addEventListener("click",beginDiscordVerification);
-$("#open-signup").addEventListener("click",async()=>{if(currentUser)await loadProfile(currentUser,true);});
-$("#open-signin").addEventListener("click",async()=>{if(currentUser)await loadProfile(currentUser,true);});
-$("#back-login-home").addEventListener("click",()=>showPublicView("public-home"));
+$("#open-signup").addEventListener("click",()=>{staffLoginMode=true;showPublicView("login");$("#discord-login").classList.add("hidden");$("#staff-email-login").open=true;message("");});
+$("#open-signin").addEventListener("click",()=>{staffLoginMode=false;showPublicView("login");$("#discord-login").classList.remove("hidden");$("#staff-email-login").open=false;message("");});
+$("#back-login-home").addEventListener("click",()=>{staffLoginMode=false;$("#discord-login").classList.remove("hidden");showPublicView("public-home");});
 $("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#public-whitelist-form").addEventListener("submit",async event=>{
   event.preventDefault();
@@ -91,7 +92,7 @@ function showPage(page) {
   $("#crumb").textContent = active ? active.textContent.trim() : page;
   $("#sidebar").classList.remove("open");
 }
-async function loadProfile(user, openPortal = false) {
+async function loadProfile(user, openPortal = false, staffOnly = false) {
   currentUser = user;
   // For Discord OAuth members, securely provision/refresh their profile from the
   // Discord identity in their verified Supabase session. The RPC checks whitelist status.
