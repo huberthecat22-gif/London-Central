@@ -115,7 +115,7 @@ function showPortal(profile, canReviewWhitelist) {
   showPage("dashboard");
   if (canReviewWhitelist) loadWhitelistApplications();
 }
-function showPage(page) {
+async function showPage(page) {
   if (page === "whitelist" && !currentCanReviewWhitelist) page = "dashboard";
   if (page === "member-numbers" && currentProfileRole !== "owner") page = "dashboard";
   if (["staff","recruitment"].includes(page) && currentProfileRole === "player") page = "dashboard";
