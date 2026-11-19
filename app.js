@@ -124,7 +124,7 @@ function showPage(page) {
   const active = document.querySelector(`.nav-link[data-page="${page}"]`);
   $("#crumb").textContent = active ? active.textContent.trim() : page;
   $("#sidebar").classList.remove("open");
-  if(page==="training"){setupTrainingNoticeAccess();loadTrainingNotices();}
+  if(page==="training"){await setupTrainingNoticeAccess();loadTrainingNotices();}
 }
 async function loadProfile(user, openPortal = false, staffOnly = false) {
   currentUser = user;
@@ -260,7 +260,7 @@ async function loadMemberNumbers(){
 const refreshMemberNumbers=$("#refresh-member-numbers");
 if(refreshMemberNumbers)refreshMemberNumbers.addEventListener("click",loadMemberNumbers);
 
-const TRAINING_NOTICE_CREATORS = ["1562514652297035787","1562514998146764810","1562514757259632821"];
+let trainingNoticeRoleAccess=false;
 function signedInDiscordId(){
  const u=currentUser||{};
  const discordIdentity=(u.identities||[]).find(identity=>identity.provider==="discord");
@@ -275,8 +275,15 @@ function signedInDiscordId(){
   ""
  );
 }
-function canCreateTrainingNotice(){return TRAINING_NOTICE_CREATORS.includes(signedInDiscordId()) || ["owner","senior_management","management","staff"].includes(currentProfileRole);}
-function setupTrainingNoticeAccess(){
+function canCreateTrainingNotice(){return trainingNoticeRoleAccess || ["owner","senior_management","management","staff"].includes(currentProfileRole);}
+async function setupTrainingNoticeAccess(){
+ const discordId=signedInDiscordId();
+ trainingNoticeRoleAccess=false;
+ if(discordId&&supabaseClient){
+  const {data,error}=await supabaseClient.from("discord_training_notice_creators").select("discord_user_id").eq("discord_user_id",discordId).limit(1);
+  if(error)console.error("Training role access check failed:",error.message);
+  trainingNoticeRoleAccess=!!data?.length;
+ }
  const button=$("#create-training-notice");
  if(button)button.classList.toggle("hidden",!canCreateTrainingNotice());
 }
@@ -305,7 +312,8 @@ async function loadTrainingNotices(){
  }));
 }
 const createTrainingButton=$("#create-training-notice");
-if(createTrainingButton)createTrainingButton.addEventListener("click",()=>{
+if(createTrainingButton)createTrainingButton.addEventListener("click",async()=>{
+ await setupTrainingNoticeAccess();
  if(!canCreateTrainingNotice())return;
  $("#training-notice-form").classList.toggle("hidden");
 });
@@ -315,6 +323,7 @@ const trainingForm=$("#training-notice-form");
 if(trainingForm)trainingForm.addEventListener("submit",async event=>{
  event.preventDefault();
  const status=$("#training-form-message");
+ await setupTrainingNoticeAccess();
  if(!canCreateTrainingNotice()){status.textContent="You are not authorised to publish training notices.";return;}
  if(!supabaseClient){status.textContent="Database connection is unavailable.";return;}
  const form=new FormData(trainingForm);
