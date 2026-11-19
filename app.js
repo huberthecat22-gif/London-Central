@@ -49,7 +49,20 @@ if(verifyButton){
  verifyButton.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();beginDiscordVerification();}});
 }
 $("#open-signup").addEventListener("click",()=>{staffLoginMode=true;showPublicView("login");$("#discord-login").classList.add("hidden");$("#staff-email-login").open=true;message("");});
-$("#open-signin").addEventListener("click",()=>{staffLoginMode=false;showPublicView("login");$("#discord-login").classList.remove("hidden");$("#staff-email-login").open=false;message("");});
+$("#open-signin").addEventListener("click",async()=>{
+  staffLoginMode=false;
+  $("#staff-email-login").open=false;
+  message("");
+  if(!supabaseClient){showPublicView("login");return;}
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  const signedInUser=session?.user||currentUser;
+  if(signedInUser?.app_metadata?.provider==="discord"){
+    await loadProfile(signedInUser,true,false);
+    return;
+  }
+  showPublicView("login");
+  $("#discord-login").classList.remove("hidden");
+});
 $("#back-login-home").addEventListener("click",()=>{staffLoginMode=false;$("#discord-login").classList.remove("hidden");showPublicView("public-home");});
 $("#back-public-home").addEventListener("click",()=>showPublicView("public-home"));
 $("#public-whitelist-form").addEventListener("submit",async event=>{
