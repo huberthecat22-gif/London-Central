@@ -42,6 +42,26 @@ async function processPendingNicknameUpdates(){
 }
 
 // Keep Supabase's reviewer roster in sync with the configured Discord role.
+async function syncTrainingNoticeCreatorRoles(){
+ const roleIds=["1562514652297035787","1562514998146764810","1562514757259632821"];
+ const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+ await guild.members.fetch();
+ const creators=[];
+ for(const member of guild.members.cache.values()){
+  if(member.user.bot)continue;
+  for(const roleId of roleIds){
+   if(member.roles.cache.has(roleId))creators.push({discord_user_id:member.id,role_id:roleId});
+  }
+ }
+ const {error:deleteError}=await db.from("discord_training_notice_creators").delete().not("discord_user_id","is",null);
+ if(deleteError)throw deleteError;
+ if(creators.length){
+  const {error}=await db.from("discord_training_notice_creators").upsert(creators,{onConflict:"discord_user_id,role_id"});
+  if(error)throw error;
+ }
+ console.log("Training notice creator roles synced:",creators.length,"role memberships");
+}
+
 async function syncWhitelistReviewerRole(){
  const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
  const guildId=process.env.DISCORD_GUILD_ID;
@@ -230,12 +250,14 @@ client.once(Events.ClientReady,async ready=>{
  }
  await processApprovedApplications();
  await syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message));
+ await syncTrainingNoticeCreatorRoles().catch(error=>console.error("Training notice role sync failed:",error.message));
  setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
  setInterval(()=>processPendingNicknameUpdates().catch(error=>console.error("Pending nickname sync failed",error.message)),10000);
  // Publish website-created training notices to the configured Discord channel.
  await publishPendingTrainingNotices().catch(error=>console.error("Initial training notice publish failed:",error.message));
  setInterval(()=>publishPendingTrainingNotices().catch(error=>console.error("Training notice publish failed:",error.message)),10000);
  setInterval(()=>syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message)),60000);
+ setInterval(()=>syncTrainingNoticeCreatorRoles().catch(error=>console.error("Training notice role sync failed:",error.message)),60000);
 });
 
 client.on(Events.GuildMemberAdd,member=>{
