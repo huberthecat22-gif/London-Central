@@ -401,3 +401,10 @@ button{border-radius:6px}
   .stat-card,.panel,.training-notice-card,.fms-record{border-radius:8px}
   .page-heading{margin-bottom:13px}
 }
+
+
+/* Staff player-management workspace */
+.staff-player-row{grid-template-columns:minmax(170px,1fr) minmax(170px,240px) minmax(190px,auto);align-items:center}
+.staff-player-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.staff-player-actions button{white-space:nowrap}
+@media(max-width:760px){.staff-player-row{grid-template-columns:1fr}.staff-player-actions{justify-content:stretch}.staff-player-actions button{flex:1}}
