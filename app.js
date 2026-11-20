@@ -114,10 +114,12 @@ function showPortal(profile, canReviewWhitelist) {
   document.querySelectorAll(".fms-add").forEach(el=>el.classList.toggle("hidden",!fmsCanManage()));
   showPage("dashboard");
   if (canReviewWhitelist) loadWhitelistApplications();
+  if (["owner","senior_management","management","staff"].includes(profile.role)) loadStaffPlayers();
 }
 async function showPage(page) {
   if (page === "whitelist" && !currentCanReviewWhitelist) page = "dashboard";
   if (page === "member-numbers" && currentProfileRole !== "owner") page = "dashboard";
+  if (page === "staff" && !["owner","senior_management","management","staff"].includes(currentProfileRole)) page = "dashboard";
   if (["staff","recruitment"].includes(page) && currentProfileRole === "player") page = "dashboard";
   document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${page}`));
   document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("active", el.dataset.page === page && el.classList.contains("nav-link")));
@@ -259,6 +261,35 @@ async function loadMemberNumbers(){
 }
 const refreshMemberNumbers=$("#refresh-member-numbers");
 if(refreshMemberNumbers)refreshMemberNumbers.addEventListener("click",loadMemberNumbers);
+
+async function loadStaffPlayers(){
+ const host=$("#staff-player-list");
+ if(!host||!supabaseClient||!["owner","senior_management","management","staff"].includes(currentProfileRole))return;
+ host.textContent="Loading player accounts…";
+ const {data,error}=await supabaseClient.rpc("lcfms_staff_list_players");
+ if(error){host.textContent="Could not load players: "+error.message;return;}
+ if(!data?.length){host.textContent="No registered player accounts found.";return;}
+ host.classList.remove("empty-state");
+ host.innerHTML='<div class="member-number-table">'+data.map(p=>'<div class="member-number-row staff-player-row"><div><b>'+esc(p.display_name||"FMS Player")+'</b><small>'+esc(p.roblox_username||"Roblox name not recorded")+' · '+esc(p.discord_user_id||"Discord ID unavailable")+'</small><small>Status: '+esc(p.access_status||"unknown")+'</small></div><label>FMS display name<input class="staff-player-name" data-player-id="'+esc(p.id)+'" maxlength="60" value="'+esc(p.display_name||"")+'" autocomplete="off"></label><div class="staff-player-actions"><button class="primary" type="button" data-save-player="'+esc(p.id)+'">Save name</button><button class="review-reject" type="button" data-kick-player="'+esc(p.id)+'">Kick from FMS</button></div></div>').join("")+'</div>';
+ host.querySelectorAll("[data-save-player]").forEach(button=>button.addEventListener("click",async()=>{
+  const id=button.dataset.savePlayer,input=host.querySelector('.staff-player-name[data-player-id="'+CSS.escape(id)+'"]'),name=(input?.value||"").trim();
+  if(!name||name.length>60){window.alert("Enter a name between 1 and 60 characters.");return;}
+  button.disabled=true;button.textContent="Saving…";
+  const {error:saveError}=await supabaseClient.rpc("lcfms_staff_update_player_name",{p_player_id:id,p_display_name:name});
+  if(saveError){window.alert("Could not update player name: "+saveError.message);button.disabled=false;button.textContent="Save name";return;}
+  await loadStaffPlayers();
+ }));
+ host.querySelectorAll("[data-kick-player]").forEach(button=>button.addEventListener("click",async()=>{
+  const id=button.dataset.kickPlayer;
+  if(!window.confirm("Kick this player from LCFMS? Their approved whitelist access will be revoked and they must submit a new whitelist application to return."))return;
+  button.disabled=true;button.textContent="Kicking…";
+  const {error:kickError}=await supabaseClient.rpc("lcfms_staff_kick_player",{p_player_id:id});
+  if(kickError){window.alert("Could not kick player: "+kickError.message);button.disabled=false;button.textContent="Kick from FMS";return;}
+  await loadStaffPlayers();
+ }));
+}
+const refreshStaffPlayers=$("#refresh-staff-players");
+if(refreshStaffPlayers)refreshStaffPlayers.addEventListener("click",loadStaffPlayers);
 
 let trainingNoticeRoleAccess=false;
 function signedInDiscordId(){
