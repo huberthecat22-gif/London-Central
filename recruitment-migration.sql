@@ -16,3 +16,50 @@ drop policy if exists "Approved members submit applications while open" on publi
 drop policy if exists "Applicants and recruitment creators read applications" on public.recruitment_applications;create policy "Applicants and recruitment creators read applications" on public.recruitment_applications for select to authenticated using(applicant_id=auth.uid() or public.lcfms_can_manage_recruitment());
 drop policy if exists "Recruitment creators update application status" on public.recruitment_applications;create policy "Recruitment creators update application status" on public.recruitment_applications for update to authenticated using(public.lcfms_can_manage_recruitment()) with check(public.lcfms_can_manage_recruitment());
 grant select,insert,update,delete on public.recruitment_opportunities to authenticated;grant usage,select on sequence public.recruitment_opportunities_id_seq to authenticated;grant select,insert,update on public.recruitment_applications to authenticated;
+
+
+-- Correct Discord OAuth identity matching for recruitment creator access.
+-- Supabase stores Discord account IDs in auth.identities, not reliably in auth.users.raw_user_meta_data.
+
+drop policy if exists "Users can check their own recruitment creator roles"
+on public.discord_recruitment_creators;
+
+create policy "Users can check their own recruitment creator roles"
+on public.discord_recruitment_creators
+for select to authenticated
+using (
+  exists (
+    select 1
+    from auth.identities i
+    where i.user_id = auth.uid()
+      and i.provider = 'discord'
+      and (
+        i.provider_id = discord_user_id
+        or i.identity_data->>'provider_id' = discord_user_id
+        or i.identity_data->>'sub' = discord_user_id
+      )
+  )
+);
+
+create or replace function public.lcfms_can_manage_recruitment()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select exists (
+    select 1
+    from public.discord_recruitment_creators c
+    join auth.identities i
+      on i.user_id = auth.uid()
+     and i.provider = 'discord'
+    where c.discord_user_id = coalesce(
+      i.provider_id,
+      i.identity_data->>'provider_id',
+      i.identity_data->>'sub'
+    )
+  );
+$$;
+
+grant execute on function public.lcfms_can_manage_recruitment() to authenticated;
