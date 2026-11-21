@@ -62,6 +62,16 @@ async function syncTrainingNoticeCreatorRoles(){
  console.log("Training notice creator roles synced:",creators.length,"role memberships");
 }
 
+
+async function syncRecruitmentCreatorRoles(){
+ const roleIds=["1562229509791678514","1562519700028657845","1568036085601411083","1568036518709305444","1568036745994444831","1562524241935474789","1562244907119280128","1562244660863180974","1562229847806189578","1568036958779736124","1568037032721383544","1568037096789123173","1568037156851556392","1562519805968252998","1562520367094964224","1562520546984591450","1568037960304173217","1568038069800665239","1568038554406486087","1568038490451611648","1568038612115783730","1568038675181346837","1568038735730184243","1568038833000423444","1568038876495347854","1568038914722365470","1568038975204233287"];
+ const guild=await client.guilds.fetch(process.env.DISCORD_GUILD_ID);await guild.members.fetch();const creators=[];
+ for(const member of guild.members.cache.values()){if(member.user.bot)continue;for(const roleId of roleIds)if(member.roles.cache.has(roleId))creators.push({discord_user_id:member.id,role_id:roleId,synced_at:new Date().toISOString()});}
+ const {error:delError}=await db.from("discord_recruitment_creators").delete().not("discord_user_id","is",null);if(delError)throw delError;
+ if(creators.length){const {error}=await db.from("discord_recruitment_creators").upsert(creators,{onConflict:"discord_user_id,role_id"});if(error)throw error;}
+ console.log("Recruitment creator roles synced:",creators.length);
+}
+
 async function syncWhitelistReviewerRole(){
  const roleId=process.env.DISCORD_WHITELIST_REVIEW_ROLE_ID || "1572689837176131696";
  const guildId=process.env.DISCORD_GUILD_ID;
@@ -251,6 +261,7 @@ client.once(Events.ClientReady,async ready=>{
  await processApprovedApplications();
  await syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message));
  await syncTrainingNoticeCreatorRoles().catch(error=>console.error("Training notice role sync failed:",error.message));
+ await syncRecruitmentCreatorRoles().catch(error=>console.error("Recruitment creator role sync failed:",error.message));
  setInterval(()=>processApprovedApplications().catch(error=>console.error("Whitelist approval scan failed",error.message)),15000);
  setInterval(()=>processPendingNicknameUpdates().catch(error=>console.error("Pending nickname sync failed",error.message)),10000);
  // Publish website-created training notices to the configured Discord channel.
@@ -258,6 +269,7 @@ client.once(Events.ClientReady,async ready=>{
  setInterval(()=>publishPendingTrainingNotices().catch(error=>console.error("Training notice publish failed:",error.message)),10000);
  setInterval(()=>syncWhitelistReviewerRole().catch(error=>console.error("Whitelist reviewer role sync failed:",error.message)),60000);
  setInterval(()=>syncTrainingNoticeCreatorRoles().catch(error=>console.error("Training notice role sync failed:",error.message)),60000);
+ setInterval(()=>syncRecruitmentCreatorRoles().catch(error=>console.error("Recruitment creator role sync failed:",error.message)),60000);
 });
 
 client.on(Events.GuildMemberAdd,member=>{
