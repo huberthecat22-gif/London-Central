@@ -63,3 +63,50 @@ as $$
 $$;
 
 grant execute on function public.lcfms_can_manage_recruitment() to authenticated;
+
+
+-- Use a SECURITY DEFINER helper so authenticated users do not need direct
+-- SELECT permission on Supabase's protected auth.identities table.
+create or replace function public.lcfms_current_discord_id()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(
+    i.provider_id,
+    i.identity_data->>'provider_id',
+    i.identity_data->>'sub'
+  )
+  from auth.identities i
+  where i.user_id = auth.uid()
+    and i.provider = 'discord'
+  limit 1;
+$$;
+
+grant execute on function public.lcfms_current_discord_id() to authenticated;
+
+drop policy if exists "Users can check their own recruitment creator roles"
+on public.discord_recruitment_creators;
+
+create policy "Users can check their own recruitment creator roles"
+on public.discord_recruitment_creators
+for select to authenticated
+using (discord_user_id = public.lcfms_current_discord_id());
+
+create or replace function public.lcfms_can_manage_recruitment()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.discord_recruitment_creators c
+    where c.discord_user_id = public.lcfms_current_discord_id()
+  );
+$$;
+
+grant execute on function public.lcfms_can_manage_recruitment() to authenticated;
